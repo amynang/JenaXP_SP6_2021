@@ -65,8 +65,10 @@ data.3 = data.2 %>% add_column(plot = str_c("B", data.2$`sample name 1`,
                                             "D", data.2$`sample name 3`),
                                .before = "sample name 1")
 
+# add year of sampling
 data.4 = data.3[,c(4:8,10:12)] %>% add_column(Year = 2021)
 
+# rename columns to match data structure
 names(data.4) = c("plot",
                   "Block",
                   "Plot",
@@ -77,10 +79,13 @@ names(data.4) = c("plot",
                   "soil_water_content",
                   "year")
 
+# drop the columns that don't fit the data structure
 data.5 = data.4[,-(2:4)]
 
+# round to 7 decimals
 data.5[,2:5] = round(data.5[,2:5], 7)
 
+#write file
 write.csv(data.5, file = "Soil_microbial_respiration_and_biomass_dBEF_2021_UPDATE.csv",
           quote = F,
           row.names = F,
