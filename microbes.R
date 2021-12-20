@@ -27,6 +27,9 @@ table(data.2$`sample name 1`,  #oops I spoke too soon! plots 18 & 20 from block 
 # marked "original measurement" and "remeasurement" are "married"; they both 
 # belong to B1A18. The odd one out can be safely assumed to be B2A18T3
 # No such luck for "20" one sample 1|20|2 is actually 2|20|2 but we don't know which
+# UPDATE: After checking the lab sheets, it is clear that "DIETER 7433" is the missing 
+# B2A20T2. It was written as A20T2 and transferred to the spreadsheet as 1|20|2
+# The lab sheets also confirm that "KLAUS 8909" is in fact B2A18T3
 View(filter(data.1, `sample name 2` == 18))
 View(filter(data.1, `sample name 2` == 20))
 
@@ -37,15 +40,21 @@ View(filter(data.1, `sample name 2` == 20))
 #                       raw.3$`sample name 3` == 3 &
 #                       raw.3$`date of measurement` == "2021-06-28"] = 2
 
-# this works, B1A18T3 becomes B2A18T3
+# this works, "KLAUS 8909" is B2A18T3
 data.2[48,4] = 2
+# "DIETER 7433" is B2A20T2
+data.2[55,4] = 2
 
 # rearrange again
 data.2 = data.2 %>% arrange(`sample name 1`,
                             `sample name 2`,
                             `sample name 3`)
 
+# all normal
 View(filter(data.2, `sample name 2` == 18))
+View(filter(data.2, `sample name 2` == 20))
+table(data.2$`sample name 1`, 
+      data.2$`sample name 2`)
 
 # make plot numbers double digit
 data.2$`sample name 2` = sprintf("%02d", data.2$`sample name 2`)
@@ -66,4 +75,13 @@ names(data.4) = c("plot",
                   "soil_microbial_biomass_C",
                   "respiratory_quotient",
                   "soil_water_content",
-                  "Year")
+                  "year")
+
+data.5 = data.4[,-(2:4)]
+
+data.5[,2:5] = round(data.5[,2:5], 7)
+
+write.csv(data.5, file = "Soil_microbial_respiration_and_biomass_dBEF_2021_UPDATE.csv",
+          quote = F,
+          row.names = F,
+          sep = ",")
