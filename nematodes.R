@@ -3,6 +3,8 @@ library(tidyverse)
 library(stringr)
 library(googlesheets4)
 
+############################## Community Composition ###########################
+
 raw = read_xlsx("H:/JenaSP6_2021/id034_nematodes_240-samples_JenaExperiment_DeltaBEF_July2021_Marcel-Ciobanu__240 samples Jena exp SP6 Nematodes Amyntas2021FINAL.xlsx",
                 sheet = "Synthesis",
                 range = "BP5:EB245")
@@ -67,8 +69,25 @@ rowSums(data.3[,5:68])
 # this is interesting...
 rowSums(data.3[,5:68]) == abun$`Number of Nematodes`
 
-# now we calculate species abundances per gram of dry soil
+# now we calculate species densities per 100 gram of dry soil
 data.4 = data.3 %>% mutate(across(where(is.numeric), # for all numeric columns
                                   # we divide by grams of dry soil
-                                  ~ ./soil$net.weight), 
+                                  ~ .*100/soil$net.weight), 
                            .keep = "unused")
+
+# long format for Jexis
+data.5 = data.4 %>% select(-(2:4)) %>% pivot_longer(where(is.numeric),
+                                                    names_to = "Taxon",
+                                                    values_to = "Density")
+# check, OK
+table(data.5$Taxon)
+
+data.5[,"Density"] = round(data.5[,"Density"], 7)
+
+write.csv(data.5, file = "Nematode_Community_Composition_dBEF_2021.csv",
+          quote = F,
+          row.names = F,
+          sep = ",")
+
+
+
