@@ -89,6 +89,33 @@ write.csv(data.5, file = "Nematode_Community_Composition_dBEF_2021.csv",
           row.names = F,
           sep = ",")
 
+############################ Ecophysioligical traits ###########################
+
+taxa = names(raw)[-1]
+# Change to synonym accepted by Nemaplex
+taxa[taxa == "Macroposthonia"] = "Criconemoides"
+# why are these together?
+taxa[taxa == "Rhabditidae-dauer larvae"] = "Rhabditidae"
+# query_nemaplex can be found here:
+# https://github.com/amynang/marcel/blob/main/R/functions.R
+ecophys = query_nemaplex(taxa)
+
+ecophys$StDevMass = ecophys$StderrMass * sqrt(ecophys$N)
+
+for (i in 1:64) {
+  try(hist( rlnorm( 10000, 
+                    meanlog = log(ecophys[i,4]), 
+                    sdlog = log(ecophys[i,6])), 
+            main = paste("Histogram of" , rownames(ecophys)[i]),
+            breaks = 1000 ))
+}
+
+for (i in 1:64) {
+  try(hist( rlnorm( 100, 
+                    meanlog = log(ecophys[i,4]), 
+                    sdlog = log(ecophys[i,6])), 
+            main = paste("Histogram of" , rownames(ecophys)[i])))
+}
 
 ################################ Maturity Index ################################
 
