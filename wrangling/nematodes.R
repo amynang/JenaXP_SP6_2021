@@ -89,6 +89,30 @@ write.csv(data.5, file = "Nematode_Community_Composition_dBEF_2021.csv",
           row.names = F,
           sep = ",")
 
+# grams of dry soil per cubic centimeter 
+# a sq meter has 10000 sq centimeters
+# we want to calculate grams of dry soil in a "carpet" of 100*100*10
+soil.density = read.csv("H:/JenaSP6_2021/282_4_Dataset/282_4_data.csv",sep = ";")
+soil.density = soil.density %>% arrange(plot,treatment) %>% 
+  add_column(Sample = str_c(soil.density$plot, soil.density$treatment),
+             .before = "plot")
+
+
+# now we calculate species densities per gram of dry soil
+data.6 = data.3 %>% mutate(across(where(is.numeric), # for all numeric columns
+                                  # we divide by grams of dry soil
+                                  ~ ./soil$net.weight), 
+                           .keep = "unused")
+
+# now we calculate species densities per square meter of land (10cm deep)
+data.7 = data.6 %>% filter(!(treatment == "3")) %>% 
+  mutate(across(where(is.numeric), # for all numeric columns
+                # we multiply by grams of dry soil per 100*100*10 cubic meters
+                ~ .*soil.density$BulkDensity_Soil*1e05), 
+         .keep = "unused")
+  
+  
+
 ############################ Ecophysioligical traits ###########################
 
 taxa = names(raw)[-1]
@@ -100,22 +124,77 @@ taxa[taxa == "Rhabditidae-dauer larvae"] = "Rhabditidae"
 # https://github.com/amynang/marcel/blob/main/R/functions.R
 ecophys = query_nemaplex(taxa)
 
+ecophys <- ecophys %>% mutate(feeding.type = case_when(feeding == "1" ~ "herbivore",
+                                                       feeding == "2" ~ "fungivore",
+                                                       feeding == "3" ~ "bacterivore",
+                                                       feeding == "4" ~ "detritivore",
+                                                       feeding == "5" ~ "predator",
+                                                       feeding == "6" ~ "eucaryvore",
+                                                       feeding == "8" ~ "omnivore"),
+                              .keep ="all", 
+                              .after = feeding)
+
+
 ecophys$StDevMass = ecophys$StderrMass * sqrt(ecophys$N)
+ecophys = ecophys %>% mutate(Taxon = rownames(ecophys),
+                             .keep ="all", 
+                             .before = cp_value)
+rownames(ecophys) = NULL
 
-for (i in 1:64) {
-  try(hist( rlnorm( 10000, 
-                    meanlog = log(ecophys[i,4]), 
-                    sdlog = log(ecophys[i,6])), 
-            main = paste("Histogram of" , rownames(ecophys)[i]),
-            breaks = 1000 ))
+muldervonk = read.csv("https://raw.githubusercontent.com/amynang/MulderVonk2011/main/Mulder%26Vonk2011_bodymass%26feeding.csv",
+                      sep = ";", dec = ",")
+
+#muldervonk$AvgMass.mv = as.numeric(muldervonk$AvgMass.mv)
+#muldervonk$StDevMass.mv = as.numeric(muldervonk$StDevMass.mv)
+
+colnames(muldervonk) = c("Taxon", "N.mv", "feeding.type.mv",
+                         "AvgMass.mv", "StDevMass.mv")
+
+allofthem = left_join(ecophys, muldervonk)
+allofthem$N.mv[is.na(allofthem$N.mv)] = 0
+allofthem$AvgMass.mv[is.na(allofthem$AvgMass.mv)] = 0
+allofthem$StDevMass.mv[is.na(allofthem$StDevMass.mv)] = 0
+
+# https://math.stackexchange.com/questions/2971315/how-do-i-combine-standard-deviations-of-two-groups
+
+allofthem = allofthem %>% mutate(ov.AvgMass = (N*AvgMass + N.mv*AvgMass.mv)/(N+N.mv),
+                                 ov.StDevMass = sqrt(((N-1)*StDevMass + (N.mv-1)*StDevMass.mv)/(N+N.mv-1) + 
+                                                     ((N*N.mv)*(AvgMass-AvgMass.mv)^2)/((N+N.mv)*(N+N.mv-1))),
+                                 .keep ="all")
+allofthem = allofthem[c("Taxon",
+                        "cp_value",
+                        "feeding.type","feeding.type.mv",
+                        "N",          "N.mv",  
+                        "AvgMass",    "AvgMass.mv",  
+                        "StDevMass" , "StDevMass.mv")]
+
+
+rlnormtrunc.intuitive = function(n, m, s, p=.9) {
+  trnc <- EnvStats::rlnormTrunc(n, 
+                                meanlog = log(m^2 / sqrt(s^2 + m^2)), 
+                                sdlog = sqrt(log(1 + (s^2 / m^2))), 
+                                min = qlnorm((1-p)/2, 
+                                             meanlog = log(m^2 / sqrt(s^2 + m^2)), 
+                                             sdlog = sqrt(log(1 + (s^2 / m^2)))), 
+                                max = qlnorm(1-(1-p)/2, 
+                                             meanlog = log(m^2 / sqrt(s^2 + m^2)), 
+                                             sdlog = sqrt(log(1 + (s^2 / m^2)))))
+  return(trnc)
 }
 
 for (i in 1:64) {
-  try(hist( rlnorm( 100, 
-                    meanlog = log(ecophys[i,4]), 
-                    sdlog = log(ecophys[i,6])), 
-            main = paste("Histogram of" , rownames(ecophys)[i])))
+  hist(rlnormtrunc.intuitive(10000, allofthem[i,11], allofthem[i,12]),
+       main = paste("Histogram of" , allofthem[i,1]),
+       xlab = NULL,
+       ylab = NULL,
+       breaks = 1000)
 }
+
+hist(rlnormtrunc.intuitive(10000, 26.4783, 3.821168e+01),
+     breaks = 1000)
+plot(density(rlnormtrunc.intuitive(100000, 26.4783, 3.821168e+01)))
+
+
 
 ################################ Maturity Index ################################
 
