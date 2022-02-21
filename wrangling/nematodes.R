@@ -143,14 +143,42 @@ rownames(ecophys) = NULL
 
 muldervonk = read.csv("https://raw.githubusercontent.com/amynang/MulderVonk2011/main/Mulder%26Vonk2011_bodymass%26feeding.csv",
                       sep = ";", dec = ",")
+# cohenmulder = read.csv("C:/Users/aa21qeqa/Documents/CohenMulder2014/Cohen&Mulder2014_Nematode_bodymass&feeding.csv",
+#                       sep = ";", dec = ",")
+
 
 #muldervonk$AvgMass.mv = as.numeric(muldervonk$AvgMass.mv)
 #muldervonk$StDevMass.mv = as.numeric(muldervonk$StDevMass.mv)
+# colnames(cohenmulder) = c("Taxon", "feeding.type.cm", "N.cm", 
+#                          "AvgMass.cm", "StDevMass.cm")
 
 colnames(muldervonk) = c("Taxon", "N.mv", "feeding.type.mv",
                          "AvgMass.mv", "StDevMass.mv")
 
-allofthem = left_join(ecophys, muldervonk)
+allofthem = full_join(muldervonk, cohenmulder)
+
+allofmine = left_join(ecophys, allofthem)
+
+the.missing = setdiff(taxa, muldervonk$Taxon)
+
+library(taxize)
+tax.1 <- tax_name(muldervonk$Taxon, get = "family", db = "ncbi")
+tax.1[33,3] = "Telotylenchidae"
+tax.1[65,3] = "Tylenchidae"
+tax.1[80,3] = "Thornenematidae"
+tax.2 <- tax_name(the.missing, get = "family", db = "ncbi")
+
+muldervonk = muldervonk %>% add_column(Family = tax.1$family, .before = "Taxon")
+
+avgfam = muldervonk %>% group_by(Family) %>% 
+                        summarise(AvgMass = mean(AvgMass.mv),
+                                  AvgStDevMass= mean(StDevMass.mv))
+
+tax.2$AvgMass = avgfam$AvgMass[match(tax.2$family,avgfam$Family)]
+tax.2$StDevMass = avgfam$AvgStDevMass[match(tax.2$family,avgfam$Family)]
+
+
+
 allofthem$N.mv[is.na(allofthem$N.mv)] = 0
 allofthem$AvgMass.mv[is.na(allofthem$AvgMass.mv)] = 0
 allofthem$StDevMass.mv[is.na(allofthem$StDevMass.mv)] = 0
