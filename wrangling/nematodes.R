@@ -122,105 +122,123 @@ taxa[taxa == "Macroposthonia"] = "Criconemoides"
 taxa[taxa == "Rhabditidae-dauer larvae"] = "Rhabditidae"
 # query_nemaplex can be found here:
 # https://github.com/amynang/marcel/blob/main/R/functions.R
-ecophys = query_nemaplex(taxa)
+nemaplex = query_nemaplex(taxa)
 
-ecophys <- ecophys %>% mutate(feeding.type = case_when(feeding == "1" ~ "herbivore",
-                                                       feeding == "2" ~ "fungivore",
-                                                       feeding == "3" ~ "bacterivore",
-                                                       feeding == "4" ~ "detritivore",
-                                                       feeding == "5" ~ "predator",
-                                                       feeding == "6" ~ "eucaryvore",
-                                                       feeding == "8" ~ "omnivore"),
-                              .keep ="all", 
-                              .after = feeding)
+nemaplex <- nemaplex %>% mutate(feeding.type = case_when(feeding == "1" ~ "herbivore",
+                                                         feeding == "2" ~ "fungivore",
+                                                         feeding == "3" ~ "bacterivore",
+                                                         feeding == "4" ~ "detritivore",
+                                                         feeding == "5" ~ "predator",
+                                                         feeding == "6" ~ "eucaryvore",
+                                                         feeding == "8" ~ "omnivore"),
+                                .keep ="all", 
+                                .after = feeding)
 
 
-ecophys$StDevMass = ecophys$StderrMass * sqrt(ecophys$N)
-ecophys = ecophys %>% mutate(Taxon = rownames(ecophys),
-                             .keep ="all", 
-                             .before = cp_value)
-rownames(ecophys) = NULL
+nemaplex$StDevMass = nemaplex$StderrMass * sqrt(nemaplex$N)
+nemaplex = nemaplex %>% mutate(Taxon = rownames(nemaplex),
+                               .keep ="all", 
+                               .before = cp_value)
+rownames(nemaplex) = NULL
 
 muldervonk = read.csv("https://raw.githubusercontent.com/amynang/MulderVonk2011/main/Mulder%26Vonk2011_bodymass%26feeding.csv",
                       sep = ";", dec = ",")
 # cohenmulder = read.csv("C:/Users/aa21qeqa/Documents/CohenMulder2014/Cohen&Mulder2014_Nematode_bodymass&feeding.csv",
 #                       sep = ";", dec = ",")
 
+ecophys = data.frame(Taxon = nemaplex$Taxon,
+                     AvgMass = NA)
 
-#muldervonk$AvgMass.mv = as.numeric(muldervonk$AvgMass.mv)
-#muldervonk$StDevMass.mv = as.numeric(muldervonk$StDevMass.mv)
-# colnames(cohenmulder) = c("Taxon", "feeding.type.cm", "N.cm", 
-#                          "AvgMass.cm", "StDevMass.cm")
+ecophys$AvgMass = ifelse(ecophys$Taxon %in% muldervonk$TAX.MORPHON, 
+                         muldervonk$AvgMass[match(ecophys$Taxon, muldervonk$TAX.MORPHON)], 
+                         nemaplex$AvgMass[match(ecophys$Taxon, nemaplex$Taxon)])
 
-colnames(muldervonk) = c("Taxon", "N.mv", "feeding.type.mv",
-                         "AvgMass.mv", "StDevMass.mv")
+ecophys$StDevMass = ifelse(ecophys$Taxon %in% muldervonk$TAX.MORPHON, 
+                           muldervonk$StDevMass[match(ecophys$Taxon, muldervonk$TAX.MORPHON)], 
+                           nemaplex$StDevMass[match(ecophys$Taxon, nemaplex$Taxon)])
 
-allofthem = full_join(muldervonk, cohenmulder)
+ecophys[24, "StDevMass"] = ecophys[24, "AvgMass"]
+ecophys[51, "StDevMass"] = ecophys[51, "AvgMass"]
 
-allofmine = left_join(ecophys, allofthem)
-
-the.missing = setdiff(taxa, muldervonk$Taxon)
-
-library(taxize)
-tax.1 <- tax_name(muldervonk$Taxon, get = "family", db = "ncbi")
-tax.1[33,3] = "Telotylenchidae"
-tax.1[65,3] = "Tylenchidae"
-tax.1[80,3] = "Thornenematidae"
-tax.2 <- tax_name(the.missing, get = "family", db = "ncbi")
-
-muldervonk = muldervonk %>% add_column(Family = tax.1$family, .before = "Taxon")
-
-avgfam = muldervonk %>% group_by(Family) %>% 
-                        summarise(AvgMass = mean(AvgMass.mv),
-                                  AvgStDevMass= mean(StDevMass.mv))
-
-tax.2$AvgMass = avgfam$AvgMass[match(tax.2$family,avgfam$Family)]
-tax.2$StDevMass = avgfam$AvgStDevMass[match(tax.2$family,avgfam$Family)]
+ecophys = ecophys %>% add_column(feeding.type = nemaplex$feeding.type,
+                                 .before = "AvgMass")
 
 
 
-allofthem$N.mv[is.na(allofthem$N.mv)] = 0
-allofthem$AvgMass.mv[is.na(allofthem$AvgMass.mv)] = 0
-allofthem$StDevMass.mv[is.na(allofthem$StDevMass.mv)] = 0
-
-# https://math.stackexchange.com/questions/2971315/how-do-i-combine-standard-deviations-of-two-groups
-
-allofthem = allofthem %>% mutate(ov.AvgMass = (N*AvgMass + N.mv*AvgMass.mv)/(N+N.mv),
-                                 ov.StDevMass = sqrt(((N-1)*StDevMass + (N.mv-1)*StDevMass.mv)/(N+N.mv-1) + 
-                                                     ((N*N.mv)*(AvgMass-AvgMass.mv)^2)/((N+N.mv)*(N+N.mv-1))),
-                                 .keep ="all")
-allofthem = allofthem[c("Taxon",
-                        "cp_value",
-                        "feeding.type","feeding.type.mv",
-                        "N",          "N.mv",  
-                        "AvgMass",    "AvgMass.mv",  
-                        "StDevMass" , "StDevMass.mv")]
-
-
-rlnormtrunc.intuitive = function(n, m, s, p=.9) {
-  trnc <- EnvStats::rlnormTrunc(n, 
-                                meanlog = log(m^2 / sqrt(s^2 + m^2)), 
-                                sdlog = sqrt(log(1 + (s^2 / m^2))), 
-                                min = qlnorm((1-p)/2, 
-                                             meanlog = log(m^2 / sqrt(s^2 + m^2)), 
-                                             sdlog = sqrt(log(1 + (s^2 / m^2)))), 
-                                max = qlnorm(1-(1-p)/2, 
-                                             meanlog = log(m^2 / sqrt(s^2 + m^2)), 
-                                             sdlog = sqrt(log(1 + (s^2 / m^2)))))
-  return(trnc)
-}
-
-for (i in 1:64) {
-  hist(rlnormtrunc.intuitive(10000, allofthem[i,11], allofthem[i,12]),
-       main = paste("Histogram of" , allofthem[i,1]),
-       xlab = NULL,
-       ylab = NULL,
-       breaks = 1000)
-}
-
-hist(rlnormtrunc.intuitive(10000, 26.4783, 3.821168e+01),
-     breaks = 1000)
-plot(density(rlnormtrunc.intuitive(100000, 26.4783, 3.821168e+01)))
+# #muldervonk$AvgMass.mv = as.numeric(muldervonk$AvgMass.mv)
+# #muldervonk$StDevMass.mv = as.numeric(muldervonk$StDevMass.mv)
+# # colnames(cohenmulder) = c("Taxon", "feeding.type.cm", "N.cm", 
+# #                          "AvgMass.cm", "StDevMass.cm")
+# 
+# colnames(muldervonk) = c("Taxon", "N.mv", "feeding.type.mv",
+#                          "AvgMass.mv", "StDevMass.mv")
+# 
+# allofthem = full_join(muldervonk, cohenmulder)
+# 
+# allofmine = left_join(nemaplex, allofthem)
+# 
+# the.missing = setdiff(taxa, muldervonk$Taxon)
+# 
+# library(taxize)
+# tax.1 <- tax_name(muldervonk$Taxon, get = "family", db = "ncbi")
+# tax.1[33,3] = "Telotylenchidae"
+# tax.1[65,3] = "Tylenchidae"
+# tax.1[80,3] = "Thornenematidae"
+# tax.2 <- tax_name(the.missing, get = "family", db = "ncbi")
+# 
+# muldervonk = muldervonk %>% add_column(Family = tax.1$family, .before = "Taxon")
+# 
+# avgfam = muldervonk %>% group_by(Family) %>% 
+#   summarise(AvgMass = mean(AvgMass.mv),
+#             AvgStDevMass= mean(StDevMass.mv))
+# 
+# tax.2$AvgMass = avgfam$AvgMass[match(tax.2$family,avgfam$Family)]
+# tax.2$StDevMass = avgfam$AvgStDevMass[match(tax.2$family,avgfam$Family)]
+# 
+# 
+# 
+# allofthem$N.mv[is.na(allofthem$N.mv)] = 0
+# allofthem$AvgMass.mv[is.na(allofthem$AvgMass.mv)] = 0
+# allofthem$StDevMass.mv[is.na(allofthem$StDevMass.mv)] = 0
+# 
+# # https://math.stackexchange.com/questions/2971315/how-do-i-combine-standard-deviations-of-two-groups
+# 
+# allofthem = allofthem %>% mutate(ov.AvgMass = (N*AvgMass + N.mv*AvgMass.mv)/(N+N.mv),
+#                                  ov.StDevMass = sqrt(((N-1)*StDevMass + (N.mv-1)*StDevMass.mv)/(N+N.mv-1) + 
+#                                                        ((N*N.mv)*(AvgMass-AvgMass.mv)^2)/((N+N.mv)*(N+N.mv-1))),
+#                                  .keep ="all")
+# allofthem = allofthem[c("Taxon",
+#                         "cp_value",
+#                         "feeding.type","feeding.type.mv",
+#                         "N",          "N.mv",  
+#                         "AvgMass",    "AvgMass.mv",  
+#                         "StDevMass" , "StDevMass.mv")]
+# 
+# 
+# rlnormtrunc.intuitive = function(n, m, s, p=.9) {
+#   trnc <- EnvStats::rlnormTrunc(n, 
+#                                 meanlog = log(m^2 / sqrt(s^2 + m^2)), 
+#                                 sdlog = sqrt(log(1 + (s^2 / m^2))), 
+#                                 min = qlnorm((1-p)/2, 
+#                                              meanlog = log(m^2 / sqrt(s^2 + m^2)), 
+#                                              sdlog = sqrt(log(1 + (s^2 / m^2)))), 
+#                                 max = qlnorm(1-(1-p)/2, 
+#                                              meanlog = log(m^2 / sqrt(s^2 + m^2)), 
+#                                              sdlog = sqrt(log(1 + (s^2 / m^2)))))
+#   return(trnc)
+# }
+# 
+# for (i in 1:64) {
+#   hist(rlnormtrunc.intuitive(10000, allofthem[i,11], allofthem[i,12]),
+#        main = paste("Histogram of" , allofthem[i,1]),
+#        xlab = NULL,
+#        ylab = NULL,
+#        breaks = 1000)
+# }
+# 
+# hist(rlnormtrunc.intuitive(10000, 26.4783, 3.821168e+01),
+#      breaks = 1000)
+# plot(density(rlnormtrunc.intuitive(100000, 26.4783, 3.821168e+01)))
 
 
 
