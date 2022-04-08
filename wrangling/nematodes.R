@@ -124,6 +124,7 @@ taxa[taxa == "Rhabditidae-dauer larvae"] = "Rhabditidae"
 # https://github.com/amynang/marcel/blob/main/R/functions.R
 nemaplex = query_nemaplex(taxa)
 
+#replace feeding codes with their meaning
 nemaplex <- nemaplex %>% mutate(feeding.type = case_when(feeding == "1" ~ "herbivore",
                                                          feeding == "2" ~ "fungivore",
                                                          feeding == "3" ~ "bacterivore",
@@ -134,31 +135,36 @@ nemaplex <- nemaplex %>% mutate(feeding.type = case_when(feeding == "1" ~ "herbi
                                 .keep ="all", 
                                 .after = feeding)
 
-
+# calculate st deviation from st error
 nemaplex$StDevMass = nemaplex$StderrMass * sqrt(nemaplex$N)
+# make taxon a column then drop row names
 nemaplex = nemaplex %>% mutate(Taxon = rownames(nemaplex),
                                .keep ="all", 
                                .before = cp_value)
 rownames(nemaplex) = NULL
 
+
+#bodymass data from 10.1890/11-0546.1
 muldervonk = read.csv("https://raw.githubusercontent.com/amynang/MulderVonk2011/main/Mulder%26Vonk2011_bodymass%26feeding.csv",
                       sep = ";", dec = ",")
-# cohenmulder = read.csv("C:/Users/aa21qeqa/Documents/CohenMulder2014/Cohen&Mulder2014_Nematode_bodymass&feeding.csv",
-#                       sep = ";", dec = ",")
 
+#create an empty-ish dataframe
 ecophys = data.frame(Taxon = nemaplex$Taxon,
                      AvgMass = NA)
 
+# we will rely on Mulder & Vonk (2011) for bodymass information
+# if a taxon is not there we resort to nemaplex
 ecophys$AvgMass = ifelse(ecophys$Taxon %in% muldervonk$TAX.MORPHON, 
                          muldervonk$AvgMass[match(ecophys$Taxon, muldervonk$TAX.MORPHON)], 
                          nemaplex$AvgMass[match(ecophys$Taxon, nemaplex$Taxon)])
-
 ecophys$StDevMass = ifelse(ecophys$Taxon %in% muldervonk$TAX.MORPHON, 
                            muldervonk$StDevMass[match(ecophys$Taxon, muldervonk$TAX.MORPHON)], 
                            nemaplex$StDevMass[match(ecophys$Taxon, nemaplex$Taxon)])
 
+# only one individual! maybe nemaplex to the resque?
 ecophys[24, "StDevMass"] = ecophys[24, "AvgMass"]
 ecophys[51, "StDevMass"] = ecophys[51, "AvgMass"]
+
 
 ecophys = ecophys %>% add_column(feeding.type = nemaplex$feeding.type,
                                  .before = "AvgMass")
