@@ -19,12 +19,14 @@ library(tidyverse)
 # hum = 1-vegan::vegdist(unc, method = "jaccard", binary=TRUE)
 # as.matrix(hum)[4:6,1:3]
 
+########################## Protura, Pauropoda, Symphyla ########################
 
+################################### Collembola #################################
 
 raw = read_xlsx("H:/JenaSP6_2021/Coll family.xlsx",
                 sheet = "Tabelle1",
                 na = "")
-df_new = col %>% select(-contains("length"))
+df_new = raw %>% select(-contains("length"))
 # mmmm = str_split(col[1,]$`length (mm)...5`, pattern = ";", simplify = TRUE)
 # names(mmmm) = rownames(unc)
 # df <- data.frame(matrix(unlist(mmmm), nrow=6, byrow=TRUE),stringsAsFactors=FALSE)
@@ -58,4 +60,7 @@ for (i in 1:11) {
   mmmm[,2+i] <- new_vector
 }
 
-write.csv(mmmm, file = "H:/aaaarrrgh.csv")
+# write.csv(mmmm, file = "H:/aaaarrrgh.csv")
+
+
+##################################### Acari ####################################
