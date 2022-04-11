@@ -2,6 +2,7 @@ library(readxl)
 library(tidyverse)
 
 
+
 # col = read_xlsx("H:/JenaSP6_2021/Coll family.xlsx",
 #                 sheet = "Sheet1",
 #                 na = "")
@@ -29,11 +30,17 @@ raw = read_xlsx("H:/JenaSP6_2021/Coll family.xlsx",
                 sheet = "Tabelle1",
                 na = "")
 df_new = raw %>% select(-contains("length"))
+
+mmm = raw[1:207,1:2] %>% arrange(Plot, Subplot)
+mmmm = mmm[rep(seq_len(nrow(mmm)), each = 10), ]
+#row.names(mmmm) <- NULL
+
+
 # mmmm = str_split(col[1,]$`length (mm)...5`, pattern = ";", simplify = TRUE)
 # names(mmmm) = rownames(unc)
 # df <- data.frame(matrix(unlist(mmmm), nrow=6, byrow=TRUE),stringsAsFactors=FALSE)
 
-coll = col %>% rename_at(vars(starts_with('length')), funs(paste(colnames(df_new[,4:14]), .))) %>% 
+coll = raw %>% rename_at(vars(starts_with('length')), funs(paste(colnames(df_new[,4:14]), .))) %>% 
   arrange(Plot, Subplot)
 coll = as.data.frame(coll)
 
@@ -44,9 +51,9 @@ for(i in colnames(df_new[4:14])) {
   mmmm[,i] <- NA
 }
 
-
+#i=1
 for (i in 1:11) {
-  mmmmm = as.data.frame(str_split(colll[,i], 
+  mmmmm = as.data.frame(str_split(colll[1:207,i], 
                                   pattern = ";|:|; |: |. |, ", 
                                   simplify = T))
   n=dim(mmmmm)[2]
@@ -61,6 +68,9 @@ for (i in 1:11) {
   new_vector <- c(t(mmmmm))
   mmmm[,2+i] <- new_vector
 }
+
+mmmm = mmmm %>% mutate_all(function(x) gsub(" ","",x)) %>% mutate_all(function(x) gsub(",",".",x))
+mmmm[,3:13] = mmmm[,3:13] %>% mutate_if(is.character,as.numeric)
 
 # write.csv(mmmm, file = "H:/aaaarrrgh.csv")
 
