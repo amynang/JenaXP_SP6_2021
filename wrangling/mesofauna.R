@@ -31,7 +31,7 @@ raw = read_xlsx("H:/JenaSP6_2021/Coll family.xlsx",
                 na = "")
 df_new = raw %>% select(-contains("length"))
 
-mmm = raw[1:207,1:2] %>% arrange(Plot, Subplot)
+mmm = raw[ ,1:2] %>% arrange(Plot, Subplot)
 mmmm = mmm[rep(seq_len(nrow(mmm)), each = 10), ]
 #row.names(mmmm) <- NULL
 
@@ -53,7 +53,7 @@ for(i in colnames(df_new[4:14])) {
 
 #i=1
 for (i in 1:11) {
-  mmmmm = as.data.frame(str_split(colll[1:207,i], 
+  mmmmm = as.data.frame(str_split(colll[ ,i], 
                                   pattern = ";|:|; |: |. |, ", 
                                   simplify = T))
   n=dim(mmmmm)[2]
