@@ -7,8 +7,10 @@ library(googlesheets4)
 
 raw = read_xlsx("H:/JenaSP6_2021/id034_nematodes_240-samples_JenaExperiment_DeltaBEF_July2021_Marcel-Ciobanu__240 samples Jena exp SP6 Nematodes Amyntas2021FINAL.xlsx",
                 sheet = "Synthesis",
-                range = "BP5:EB245")
-
+                range = "A5:BM245",
+                #range = "BP5:EB245"
+                )
+raw[is.na(raw)] = 0
 # arrange by sample
 data = raw %>% arrange(Sample) 
 
@@ -35,6 +37,19 @@ data.2 = data.2 %>% arrange(Sample)
 table(data.2$block,data.2$plot)
 View(filter(data.2, block == "B1" & plot == 12))
 
+# This results in dataset 344 in https://jexis.uni-jena.de
+# data4jexis = data.2 %>% select(-(2:4)) %>% pivot_longer(!Sample,
+#                                                         names_to = "Taxon",
+#                                                         values_to = "Individuals")
+# colnames(data4jexis) = c("plotcode","scientific name","quantity")
+# write.csv(data4jexis, file = "Identified_Nematodes_dBEF_2021.csv",
+#           quote = T,
+#           row.names = F,
+#           sep = ",")
+
+# transform to frequencies
+data.2[,5:68] = vegan::decostand(data.2[,5:68],"total",1) 
+
 # get nematode abundances & soil info
 gs4_deauth() #does this work?
 abun = read_sheet("https://docs.google.com/spreadsheets/d/1YMQmyhLYfr86CcmwpLwRkLQPxwy4Yk2oyrPKXO8Cf0w/edit#gid=0",
@@ -51,6 +66,15 @@ abun = abun %>% add_column(Sample = str_c(abun$Plot, gsub("Treatment", "D", abun
 soil = soil %>% add_column(Sample = str_c(soil$Plot, gsub("Treatment", "D", abun$Subplot)),
                            .before = "Plot")
 
+# This results in dataset 345 in https://jexis.uni-jena.de
+# data4jexis = cbind(abun,soil) %>% select(c(2,5,10,12,13)) %>% 
+#   mutate(water.content = round(water.content/init.weight, 3)) %>% select(-3)
+# colnames(data4jexis) = c("plotcode","quantity","soil dry mass","soil water content")
+# write.csv(data4jexis, file = "Counted_Nematodes_dBEF_2021.csv",
+#           quote = T,
+#           row.names = F,
+#           sep = ",")
+
 # check, all good
 data.2$Sample == abun$Sample 
 data.2$Sample == soil$Sample 
@@ -59,8 +83,8 @@ data.2$Sample == soil$Sample
 # data.3 = data.2
 # data.3[,5:68] = data.2[,5:68] * abun$`Number of Nematodes`/100
 data.3 = data.2 %>% mutate(across(where(is.numeric), # for all numeric columns
-                           # we multiply by total abundance and divide by 100
-                                  ~ .*abun$`Number of Nematodes`/100), 
+                           # we multiply by total abundance
+                                  ~ .*abun$`Number of Nematodes`), 
                            .keep = "unused")
 
 
@@ -75,19 +99,19 @@ data.4 = data.3 %>% mutate(across(where(is.numeric), # for all numeric columns
                                   ~ .*100/soil$net.weight), 
                            .keep = "unused")
 
-# long format for Jexis
-data.5 = data.4 %>% select(-(2:4)) %>% pivot_longer(where(is.numeric),
-                                                    names_to = "Taxon",
-                                                    values_to = "Density")
-# check, OK
-table(data.5$Taxon)
-
-data.5[,"Density"] = round(data.5[,"Density"], 7)
-
-write.csv(data.5, file = "Nematode_Community_Composition_dBEF_2021.csv",
-          quote = F,
-          row.names = F,
-          sep = ",")
+# # long format for Jexis
+# data.5 = data.4 %>% select(-(2:4)) %>% pivot_longer(where(is.numeric),
+#                                                     names_to = "Taxon",
+#                                                     values_to = "Density")
+# # check, OK
+# table(data.5$Taxon)
+# 
+# data.5[,"Density"] = round(data.5[,"Density"], 7)
+# 
+# write.csv(data.5, file = "Nematode_Community_Composition_dBEF_2021.csv",
+#           quote = F,
+#           row.names = F,
+#           sep = ",")
 
 # grams of dry soil per cubic centimeter 
 # a sq meter has 10000 sq centimeters
