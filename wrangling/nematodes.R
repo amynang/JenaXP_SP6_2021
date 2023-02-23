@@ -146,6 +146,7 @@ taxa[taxa == "Macroposthonia"] = "Criconemoides"
 taxa[taxa == "Rhabditidae-dauer larvae"] = "Rhabditidae"
 # query_nemaplex can be found here:
 # https://github.com/amynang/marcel/blob/main/R/functions.R
+source("https://raw.githubusercontent.com/amynang/marcel/main/R/functions.R")
 nemaplex = query_nemaplex(taxa)
 
 #replace feeding codes with their meaning
@@ -158,6 +159,24 @@ nemaplex <- nemaplex %>% mutate(feeding.type = case_when(feeding == "1" ~ "herbi
                                                          feeding == "8" ~ "omnivore"),
                                 .keep ="all", 
                                 .after = feeding)
+
+nemaplexx <- nemaplex %>% mutate(feeding.type = case_when(feeding.type == "herbivore"   ~ "h.nematodes",
+                                                          feeding.type == "fungivore"   ~ "f.nematodes",
+                                                          feeding.type == "bacterivore" ~ "b.nematodes",
+                                                          feeding.type == "detritivore" ~ "detritivore",
+                                                          feeding.type == "predator"    ~ "p.nematodes",
+                                                          feeding.type == "eucaryvore"  ~ "eucaryvore",
+                                                          feeding.type == "omnivore"    ~ "o.nematodes"),
+                                .keep ="all", 
+                                .after = feeding) %>% arrange()
+
+nemaplexx$feeding.type = factor(nemaplexx$feeding.type,
+                                levels = c("h.nematodes",  
+                                           "f.nematodes", "b.nematodes", 
+                                           "o.nematodes", "p.nematodes"))
+
+nemaplexx = nemaplexx %>% arrange(feeding.type)
+
 
 # calculate st deviation from st error
 nemaplex$StDevMass = nemaplex$StderrMass * sqrt(nemaplex$N)
@@ -270,7 +289,39 @@ ecophys = ecophys %>% add_column(feeding.type = nemaplex$feeding.type,
 #      breaks = 1000)
 # plot(density(rlnormtrunc.intuitive(100000, 26.4783, 3.821168e+01)))
 
+com = as.data.frame(table(nemaplexx$feeding.type))
+colnames(com) = c("Group",
+                  "No_Sp")
+com = com %>% add_row(Group = c("plants","fungi","bacteria"),
+                         No_Sp = rep(1,3),
+                         .before = 1)
 
+m=matrix(0,
+         ncol = 8,
+         nrow = 8)
+colnames(m) = rownames(m) = c("plants", "fungi", "bacteria",
+                              "h.nematodes",  
+                              "f.nematodes", "b.nematodes", 
+                              "o.nematodes", "p.nematodes")
+
+m["plants", c("h.nematodes",
+              "o.nematodes")] = 1
+m["fungi", c("f.nematodes",
+             "o.nematodes")] = 1
+m["bacteria", c("b.nematodes",
+                "o.nematodes")] = 1
+m[c("h.nematodes",
+    "f.nematodes",
+    "b.nematodes",
+    "o.nematodes",
+    "p.nematodes"), c("o.nematodes",
+                      "p.nematodes")] = 1
+
+nms <- rep(com$Group, com$No_Sp)
+m = m[nms, nms]
+
+colnames(m) = rownames(m) = c("plants","fungi","bacteria",
+                              rownames(nemaplexx))
 
 ################################ Maturity Index ################################
 
