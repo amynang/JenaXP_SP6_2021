@@ -121,6 +121,9 @@ soil.density = soil.density %>% arrange(plot,treatment) %>%
   add_column(Sample = str_c(soil.density$plot, soil.density$treatment),
              .before = "plot")
 
+soil.density3 = read.table("H:\\JenaSP6_2021\\BulkSoilDensity_mainExp_2020.txt",
+                           header = TRUE,
+                           sep = "\t")
 
 # now we calculate species densities per gram of dry soil
 data.6 = data.3 %>% mutate(across(where(is.numeric), # for all numeric columns
