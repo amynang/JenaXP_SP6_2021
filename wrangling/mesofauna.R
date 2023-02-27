@@ -1,5 +1,7 @@
 library(readxl)
 library(tidyverse)
+library(googlesheets4)
+library(stringr)
 
 
 
@@ -29,7 +31,34 @@ library(tidyverse)
 raw = read_xlsx("H:/JenaSP6_2021/Coll family.xlsx",
                 sheet = "Tabelle1",
                 na = "")
-df_new = raw %>% select(-contains("length"))
+
+df_new = raw %>% 
+  # drop bodylength columns and comment column
+  select(-c(contains("length"),26)) %>% 
+  arrange(Plot, Subplot) %>% 
+  # remove unmatched half samples 
+  slice(-c(135,141,194,246:248)) %>% 
+  # the next few lines sum samples that were split into more than one vial
+  mutate(.after = Plot,
+         .keep = "unused",
+         Subplot = str_split(.$Subplot, " ", simplify = T)[,1]) %>% 
+  pivot_longer(3:14,
+               names_to = "Species",
+               values_to = "abun") %>% 
+  group_by(Plot, Subplot, Species) %>% 
+  summarise(abun = sum(abun)) %>% 
+  pivot_wider(names_from = Species,
+              values_from = abun)
+
+# get 
+gs4_deauth() #does this work?
+in_core = read_sheet("https://docs.google.com/spreadsheets/d/1Zy3SbxS-n7lGFYuEcQ6X7sMgmP6lJMa7PGIc1n7C4xg/edit#gid=0",
+                     sheet = "Counts") %>% 
+  slice(-c(131,137,190,241:243))
+
+
+
+
 
 mmm = raw[ ,1:2] %>% arrange(Plot, Subplot)
 mmmm = mmm[rep(seq_len(nrow(mmm)), each = 10), ]
@@ -46,6 +75,12 @@ coll = as.data.frame(coll)
 
 colll = coll %>% select(contains("length"))
 colll = as.data.frame(colll)
+
+
+
+
+
+
 
 for(i in colnames(df_new[4:14])) { 
   mmmm[,i] <- NA
@@ -76,3 +111,22 @@ mmmm[,3:13] = mmmm[,3:13] %>% mutate_if(is.character,as.numeric)
 
 
 ##################################### Acari ####################################
+
+raw.acari.1 = read.xlsx("H:\\JenaSP6_2021\\Jena treatment 1 2 3 densities.xlsx",
+                        sheet = "Treatment 1")
+raw.acari.2 = read.xlsx("H:\\JenaSP6_2021\\Jena treatment 1 2 3 densities.xlsx",
+                        sheet = "Treatment 2")
+raw.acari.3 = read.xlsx("H:\\JenaSP6_2021\\Jena treatment 1 2 3 densities.xlsx",
+                        sheet = "Treatment 3")
+
+raw.acari = rbind(raw.acari.1,raw.acari.2,raw.acari.3) %>% 
+  relocate(Plot, Treatment) %>% 
+  arrange(Plot, Treatment)
+
+
+
+
+
+
+
+
