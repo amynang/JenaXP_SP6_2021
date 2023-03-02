@@ -116,14 +116,33 @@ data.4 = data.3 %>% mutate(across(where(is.numeric), # for all numeric columns
 # grams of dry soil per cubic centimeter 
 # a sq meter has 10000 sq centimeters
 # we want to calculate grams of dry soil in a "carpet" of 100*100*10
+
+# soil density measurements for treatments 1 & 2
 soil.density = read.csv("H:/JenaSP6_2021/282_4_Dataset/282_4_data.csv",sep = ";")
 soil.density = soil.density %>% arrange(plot,treatment) %>% 
-  add_column(Sample = str_c(soil.density$plot, soil.density$treatment),
-             .before = "plot")
+  add_column(Sample = str_c(.$plot, .$treatment),
+             .before = "plot") %>% select(1:3,7) %>% 
+  rename(bulk_soil_density = BulkDensity_Soil)
 
+# soil density measurements for main plots (corresponding to treatment 3 ie control)
 soil.density3 = read.table("H:\\JenaSP6_2021\\BulkSoilDensity_mainExp_2020.txt",
                            header = TRUE,
-                           sep = "\t")
+                           sep = "\t") %>% 
+  filter(upper.depth == 0 & Plot %in% unique(soil.density$plot)) %>% 
+  add_column(Sample = str_c(.$Plot, "D3"),
+             .before = "Plot") %>% 
+  add_column(treatment = "D3",
+             .after = "Plot") %>% 
+  rename(plot = Plot) %>% 
+  select(1:3,6)
+
+# names(soil.density)
+# names(soil.density3)
+
+# together
+soil.density = soil.density %>% rbind(., soil.density3) %>% 
+  arrange(plot, treatment)
+  
 
 # now we calculate species densities per gram of dry soil
 data.6 = data.3 %>% mutate(across(where(is.numeric), # for all numeric columns
@@ -132,12 +151,14 @@ data.6 = data.3 %>% mutate(across(where(is.numeric), # for all numeric columns
                            .keep = "unused")
 
 # now we calculate species densities per square meter of land (10cm deep)
-data.7 = data.6 %>% filter(!(treatment == "3")) %>% 
+data.7 = data.6 %>% #filter(!(treatment == "3")) %>% 
   mutate(across(where(is.numeric), # for all numeric columns
                 # we multiply by grams of dry soil per 100*100*10 cubic meters
-                ~ .*soil.density$BulkDensity_Soil*1e05), 
+                ~ .*soil.density$bulk_soil_density*1e05), 
          .keep = "unused")
-  
+
+#> think about rounding the above numbers up to integers if I want to sample 
+#> from bodymass distributions
   
 
 ############################ Ecophysioligical traits ###########################
@@ -149,8 +170,10 @@ taxa[taxa == "Macroposthonia"] = "Criconemoides"
 taxa[taxa == "Rhabditidae-dauer larvae"] = "Rhabditidae"
 # query_nemaplex can be found here:
 # https://github.com/amynang/marcel/blob/main/R/functions.R
-source("https://raw.githubusercontent.com/amynang/marcel/main/R/functions.R")
-nemaplex = query_nemaplex(taxa)
+# source("https://raw.githubusercontent.com/amynang/marcel/main/R/functions.R")
+# nemaplex = query_nemaplex(taxa)
+# write.csv(nemaplex, "wrangling/nemaplex.csv")
+nemaplex = read.csv("wrangling/nemaplex.csv", row.names = 1, header = TRUE)
 
 #replace feeding codes with their meaning
 nemaplex <- nemaplex %>% mutate(feeding.type = case_when(feeding == "1" ~ "herbivore",
