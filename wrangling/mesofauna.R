@@ -1,4 +1,5 @@
 library(readxl)
+library(openxlsx)
 library(tidyverse)
 library(googlesheets4)
 library(stringr)
@@ -56,7 +57,14 @@ in_core = read_sheet("https://docs.google.com/spreadsheets/d/1Zy3SbxS-n7lGFYuEcQ
                      sheet = "Counts") %>% 
   slice(-c(131,137,190,241:243))
 
-
+comp = in_core %>% #rename(Treatment = Subplot) %>% 
+  full_join(., df_new, by = join_by(Plot,Subplot)) %>% 
+  select(1:3,9) %>% 
+  #arrange(Plot,Treatment) %>% 
+  rowwise() %>% 
+  mutate(.after = `Collembola total`,
+         d = `Collembola total` - Collembola,
+         r = `Collembola total` / Collembola )
 
 
 
@@ -121,12 +129,21 @@ raw.acari.3 = read.xlsx("H:\\JenaSP6_2021\\Jena treatment 1 2 3 densities.xlsx",
 
 raw.acari = rbind(raw.acari.1,raw.acari.2,raw.acari.3) %>% 
   relocate(Plot, Treatment) %>% 
-  arrange(Plot, Treatment)
+  arrange(Plot, Treatment) %>% 
+  mutate(Treatment = str_c("Treatment", Treatment))
 
 
+comp = in_core %>% rename(Treatment = Subplot) %>% 
+  full_join(., raw.acari, by = join_by(Plot,Treatment)) %>% 
+  select(1:2,4,9:11) %>% 
+  #arrange(Plot,Treatment) %>% 
+  rowwise() %>% 
+  mutate(.after = Acari,
+         sumIDd = sum(Oribatida,Mesostigmata,`Prostigmata.+.Astigmata`),
+         d = sumIDd - Acari,
+         r = sumIDd / Acari )
 
-
-
+# B1A12T1 <-> B1A122T3
 
 
 
