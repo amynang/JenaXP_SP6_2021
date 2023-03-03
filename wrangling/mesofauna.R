@@ -25,7 +25,18 @@ library(stringr)
 
 ########################## Protura, Pauropoda, Symphyla ########################
 
+# get 
+gs4_deauth() #does this work?
+in_core = read_sheet("https://docs.google.com/spreadsheets/d/1Zy3SbxS-n7lGFYuEcQ6X7sMgmP6lJMa7PGIc1n7C4xg/edit#gid=0",
+                     sheet = "Counts") %>% 
+  slice(-c(131,137,190,241:243)) %>% 
+  rename(Treatment = Subplot)
 
+other.lengths = read_sheet("https://docs.google.com/spreadsheets/d/1Zy3SbxS-n7lGFYuEcQ6X7sMgmP6lJMa7PGIc1n7C4xg/edit#gid=1042370017",
+                 sheet = "Others_Bodylength",
+                 range = "A1:E1441",
+                 na = "")%>% 
+  rename(Treatment = Subplot)
 
 ################################### Collembola #################################
 
@@ -49,15 +60,42 @@ df_new = raw %>%
   group_by(Plot, Subplot, Species) %>% 
   summarise(abun = sum(abun)) %>% 
   pivot_wider(names_from = Species,
-              values_from = abun)
+              values_from = abun)%>% 
+  rename(Treatment = Subplot)
 
-# get 
-gs4_deauth() #does this work?
-in_core = read_sheet("https://docs.google.com/spreadsheets/d/1Zy3SbxS-n7lGFYuEcQ6X7sMgmP6lJMa7PGIc1n7C4xg/edit#gid=0",
-                     sheet = "Counts") %>% 
-  slice(-c(131,137,190,241:243))
 
-comp = in_core %>% #rename(Treatment = Subplot) %>% 
+coll.traits = data.frame(Family = names(df_new)[4:14],
+                         Order = NA,
+                         form = NA)
+
+coll.traits = coll.traits %>% mutate(Order = case_when(Family %in% c("Dicyrtomidae",
+                                                                     "Katiannidae",
+                                                                     "Sminthuridae",
+                                                                     "Synphypleona juv.") ~ "Symphypleona",
+                                                       Family %in% c("Hypogastruridae",
+                                                                     "Neanuridae",
+                                                                     "Onychiuridae",
+                                                                     "Tullbergiidae") ~ "Poduromorpha",
+                                                       Family %in% c("Entomobryidae",
+                                                                     "Isotomidae") ~ "Entomobryomorpha",
+                                                       Family == "Neelidae" ~ "Neelipleona",
+                                                       TRUE ~ "missing"),
+                                     form = case_when(Family %in% c("Dicyrtomidae",
+                                                                    "Katiannidae",
+                                                                    "Sminthuridae",
+                                                                    "Synphypleona juv.",
+                                                                    "Entomobryidae",
+                                                                    "Hypogastruridae",
+                                                                    "Neanuridae") ~ "Epigeic",
+                                                     TRUE ~ "Edaphic")) %>% arrange(form)
+
+# # get 
+# gs4_deauth() #does this work?
+# in_core = read_sheet("https://docs.google.com/spreadsheets/d/1Zy3SbxS-n7lGFYuEcQ6X7sMgmP6lJMa7PGIc1n7C4xg/edit#gid=0",
+#                      sheet = "Counts") %>% 
+#   slice(-c(131,137,190,241:243))
+
+comp.1 = in_core %>% #rename(Treatment = Subplot) %>% 
   full_join(., df_new, by = join_by(Plot,Subplot)) %>% 
   select(1:3,9) %>% 
   #arrange(Plot,Treatment) %>% 
@@ -133,7 +171,7 @@ raw.acari = rbind(raw.acari.1,raw.acari.2,raw.acari.3) %>%
   mutate(Treatment = str_c("Treatment", Treatment))
 
 
-comp = in_core %>% rename(Treatment = Subplot) %>% 
+comp.2 = in_core %>% rename(Treatment = Subplot) %>% 
   full_join(., raw.acari, by = join_by(Plot,Treatment)) %>% 
   select(1:2,4,9:11) %>% 
   #arrange(Plot,Treatment) %>% 
@@ -146,4 +184,30 @@ comp = in_core %>% rename(Treatment = Subplot) %>%
 # B1A12T1 <-> B1A122T3
 
 
-
+meso = # mesofauna as counted during sorting to groups
+       in_core %>% 
+  # combined with identified acari
+  full_join(., raw.acari, by = join_by(Plot,Treatment)) %>% 
+  # and idenitfied collembola
+  full_join(., df_new, by = join_by(Plot,Treatment)) %>% 
+  # drop comments
+  select(-Comments) %>% 
+  # *.in is the number we counted, .out is the number that were identified
+  rename(Collembola.in = Collembola,
+         Collembola.out = `Collembola total`,
+         Acari.in = Acari,
+         ProAstigmata = `Prostigmata.+.Astigmata`) %>% 
+  rowwise() %>% 
+  mutate(.after = Acari.in,
+         Acari.out = sum(Oribatida,Mesostigmata,ProAstigmata),
+         # there are small discrepancies between in and out, I am assuming that 
+         # the largest number is more reliable...
+         Acari = max(Acari.in,Acari.out, na.rm = T),
+         Collembola = max(Collembola.in,Collembola.out, na.rm = T)) %>% 
+  select(-c(Acari.in,Acari.out,Collembola.in,Collembola.out,)) %>% 
+  rowwise() %>%
+  mutate(  denominator = sum(Oribatida,Mesostigmata,ProAstigmata),
+            Oribatida = Acari*(Oribatida    / denominator),
+         Mesostigmata = Acari*(Mesostigmata / denominator),
+         ProAstigmata = Acari*(ProAstigmata / denominator)) %>% 
+  select(-c(Acari, denominator))
