@@ -128,6 +128,8 @@ soil.density = soil.density %>% arrange(plot,treatment) %>%
 soil.density3 = read.table("H:\\JenaSP6_2021\\BulkSoilDensity_mainExp_2020.txt",
                            header = TRUE,
                            sep = "\t") %>% 
+  # we only have density for 0-5cm depth in the other two treatments
+  # also dropping non-dBEF plots
   filter(upper.depth == 0 & Plot %in% unique(soil.density$plot)) %>% 
   add_column(Sample = str_c(.$Plot, "D3"),
              .before = "Plot") %>% 
