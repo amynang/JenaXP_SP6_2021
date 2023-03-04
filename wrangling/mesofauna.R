@@ -170,6 +170,13 @@ raw.acari = rbind(raw.acari.1,raw.acari.2,raw.acari.3) %>%
   arrange(Plot, Treatment) %>% 
   mutate(Treatment = str_c("Treatment", Treatment))
 
+acari.lengths = read.xlsx("H:\\JenaSP6_2021\\Jena Experiment Mite Length-D2-from measurements.xlsx",
+                          sheet = "All measurements",
+                          rows = c(1,3:252)) %>%
+  # fuck yes!!!
+  fill(Plot) %>% 
+  select(-2)
+
 
 comp.2 = in_core %>% rename(Treatment = Subplot) %>% 
   full_join(., raw.acari, by = join_by(Plot,Treatment)) %>% 
@@ -201,10 +208,12 @@ meso = # mesofauna as counted during sorting to groups
   mutate(.after = Acari.in,
          Acari.out = sum(Oribatida,Mesostigmata,ProAstigmata),
          # there are small discrepancies between in and out, I am assuming that 
-         # the largest number is more reliable...
+         # the largest number is more reliable... (worth a sensitivity analysis)
          Acari = max(Acari.in,Acari.out, na.rm = T),
          Collembola = max(Collembola.in,Collembola.out, na.rm = T)) %>% 
   select(-c(Acari.in,Acari.out,Collembola.in,Collembola.out,)) %>% 
+  # this will scale proportions of the tree groups to the number of mites counted
+  # (only relevant for cases where we counted more than were identified
   rowwise() %>%
   mutate(  denominator = sum(Oribatida,Mesostigmata,ProAstigmata),
             Oribatida = Acari*(Oribatida    / denominator),
