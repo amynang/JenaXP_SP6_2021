@@ -238,9 +238,41 @@ ecophys[51, "StDevMass"] = ecophys[51, "AvgMass"]
 
 
 ecophys = ecophys %>% add_column(feeding.type = nemaplex$feeding.type,
-                                 .before = "AvgMass")
+                                 .before = "AvgMass") %>% 
+  arrange(Taxon)
+
+Bacterivore.nematodes = ecophys$Taxon[ecophys$feeding.type == "bacterivore"]
+  Fungivore.nematodes = ecophys$Taxon[ecophys$feeding.type == "fungivore"]
+  Herbivore.nematodes = ecophys$Taxon[ecophys$feeding.type == "herbivore"] 
+   Omnivore.nematodes = ecophys$Taxon[ecophys$feeding.type == "omnivore"] 
+   Predator.nematodes = ecophys$Taxon[ecophys$feeding.type == "predator"] 
+
+micro = data.7 %>% 
+  mutate(.after = plot,
+         .keep = "unused",
+         Plot = str_split(.$Sample, "D", simplify = T)[,1],
+         Treatment = paste0("Treatment", treatment)) %>% 
+  select(-c(Sample, block, plot)) %>% 
+  rename(Rhabditidae = `Rhabditidae-dauer larvae`,
+         Criconemoides.y = Macroposthonia,
+         Criconemoides.x = Criconemoides) %>% 
+  rowwise() %>% 
+  mutate(.keep = "unused",
+         Bacterivore.nematodes = sum(pick(any_of(Bacterivore.nematodes))),
+           Fungivore.nematodes = sum(pick(any_of(Fungivore.nematodes))),
+           Herbivore.nematodes = sum(pick(any_of(Herbivore.nematodes))),
+            Omnivore.nematodes = sum(pick(any_of(Omnivore.nematodes))),
+            Predator.nematodes = sum(pick(any_of(Predator.nematodes)))) %>% 
+  mutate(# then I round up to get whole individuals 
+         # (necessary for sampling bodymass distributions)
+         across(where(is.numeric), ceiling))
 
 
+
+# Change to synonym accepted by Nemaplex
+taxa[taxa == "Macroposthonia"] = "Criconemoides"
+# why are these together?
+taxa[taxa == "Rhabditidae-dauer larvae"] = "Rhabditidae"
 
 # #muldervonk$AvgMass.mv = as.numeric(muldervonk$AvgMass.mv)
 # #muldervonk$StDevMass.mv = as.numeric(muldervonk$StDevMass.mv)

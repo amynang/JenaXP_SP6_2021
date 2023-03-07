@@ -35,8 +35,23 @@ in_core = read_sheet("https://docs.google.com/spreadsheets/d/1Zy3SbxS-n7lGFYuEcQ
 other.lengths = read_sheet("https://docs.google.com/spreadsheets/d/1Zy3SbxS-n7lGFYuEcQ6X7sMgmP6lJMa7PGIc1n7C4xg/edit#gid=1042370017",
                  sheet = "Others_Bodylength",
                  range = "A1:E1441",
-                 na = "")%>% 
+                 na = "") %>% 
   rename(Treatment = Subplot)
+
+
+# check your numbers again!
+other.masses = other.lengths %>% 
+  pivot_longer(3:5,
+               names_to = "taxon",
+               values_to = "length.mm") %>%  # Is it really mm???????
+  mutate(FreshMass.mg = (10^(1.339 + (1.992 * log10(length.mm))))/1e3) %>% 
+  drop_na()
+
+mean.masses = other.masses %>% 
+  group_by(Plot, Treatment, taxon) %>% 
+  summarise(meanMass.mg = mean(FreshMass.mg, na.rm = T))
+
+plot(other.masses$length.mm, other.masses$FreshMass.mg)
 
 ################################### Collembola #################################
 
@@ -87,7 +102,9 @@ coll.traits = coll.traits %>% mutate(Order = case_when(Family %in% c("Dicyrtomid
                                                                     "Entomobryidae",
                                                                     "Hypogastruridae",
                                                                     "Neanuridae") ~ "Epigeic",
-                                                     TRUE ~ "Edaphic")) %>% arrange(form)
+                                                     TRUE ~ "Edaphic")) %>% 
+  arrange(form) %>% 
+  mutate(form_Order = paste(form, Order))
 
 # # get 
 # gs4_deauth() #does this work?
@@ -105,34 +122,26 @@ comp.1 = in_core %>% #rename(Treatment = Subplot) %>%
          r = `Collembola total` / Collembola )
 
 
+# create a plot-subplot dataframe
+plot_sub = raw[ ,1:2] %>% arrange(Plot, Subplot)
+# expand so every subplot gets 10 rows
+plot_sub_expanded = plot_sub[rep(seq_len(nrow(plot_sub)), each = 10), ]
 
-mmm = raw[ ,1:2] %>% arrange(Plot, Subplot)
-mmmm = mmm[rep(seq_len(nrow(mmm)), each = 10), ]
-#row.names(mmmm) <- NULL
-
-
-# mmmm = str_split(col[1,]$`length (mm)...5`, pattern = ";", simplify = TRUE)
-# names(mmmm) = rownames(unc)
-# df <- data.frame(matrix(unlist(mmmm), nrow=6, byrow=TRUE),stringsAsFactors=FALSE)
-
-coll = raw %>% rename_at(vars(starts_with('length')), funs(paste(colnames(df_new[,4:14]), .))) %>% 
+# column name index
+name.index = raw %>% select(-c(contains("length"),26)) 
+# add family names to length columns
+coll = raw %>% rename_at(vars(starts_with('length')), funs(paste(colnames(name.index[,4:14]), .))) %>% 
   arrange(Plot, Subplot)
 coll = as.data.frame(coll)
-
+# keep lengths only
 colll = coll %>% select(contains("length"))
-colll = as.data.frame(colll)
 
-
-
-
-
-
-
-for(i in colnames(df_new[4:14])) { 
-  mmmm[,i] <- NA
+# add family columns into expanded dataframe
+for(i in colnames(name.index[4:14])) { 
+  plot_sub_expanded[,i] <- NA
 }
 
-#i=1
+# now we fill the expanded dataframe with body lengths
 for (i in 1:11) {
   mmmmm = as.data.frame(str_split(colll[ ,i], 
                                   pattern = ";|:|; |: |. |, ", 
@@ -147,14 +156,31 @@ for (i in 1:11) {
   }
   mmmmm = as.matrix(mmmmm)
   new_vector <- c(t(mmmmm))
-  mmmm[,2+i] <- new_vector
+  plot_sub_expanded[,2+i] <- new_vector
 }
 
-mmmm = mmmm %>% mutate_all(function(x) gsub(" ","",x)) %>% mutate_all(function(x) gsub(",",".",x))
-mmmm[,3:13] = mmmm[,3:13] %>% mutate_if(is.character,as.numeric)
+collembola.lengths = plot_sub_expanded %>% 
+  # remove spaces
+  mutate_all(function(x) gsub(" ","",x)) %>% 
+  # change decimal
+  mutate_all(function(x) gsub(",",".",x))
+# one last typo (if only)
+collembola.lengths[collembola.lengths == "07"] = "0.7"
+# turn to numeric
+collembola.lengths[,3:13] = collembola.lengths[,3:13] %>% 
+  mutate_if(is.character,as.numeric)
+# couple more issues
+collembola.lengths[collembola.lengths == 0] = NA
+collembola.lengths[collembola.lengths == 9.4] = NA
 
-# write.csv(mmmm, file = "H:/aaaarrrgh.csv")
-
+collembola.masses = collembola.lengths %>% 
+  rename(Treatment = Subplot) %>% 
+  pivot_longer(3:13,
+               names_to = "taxon",
+               values_to = "length.mm") %>% 
+  mutate(FreshMass.mg = (10^(1.339 + (1.992 * log10(length.mm))))/1e3) %>% 
+  drop_na() %>% 
+  arrange(Plot, Treatment, taxon)
 
 ##################################### Acari ####################################
 
@@ -175,10 +201,28 @@ acari.lengths = read.xlsx("H:\\JenaSP6_2021\\Jena Experiment Mite Length-D2-from
                           rows = c(1,3:252)) %>%
   # fuck yes!!!
   fill(Plot) %>% 
-  select(-2)
+  select(-2) %>% 
+  add_column(.after = "Plot",
+             Treatment = "Treatment2")
+
+acari.masses = acari.lengths %>% 
+  pivot_longer(3:5,
+               names_to = "taxon",
+               values_to = "length.micro") %>%  # Is it really mm???????
+  mutate(FreshMass.mg = case_when(# based on Mercer 2001 10.1017/S0954102001000219
+    # (dividing by 1e3 because Mercer works with micrograms for these taxa)
+    taxon ==    "Oribatida" ~ (10^(2.146 + (2.770 * log(length.micro/1e3)))) / 1e3,
+    taxon ==  "Prostigmata" ~ (10^(2.124 + (2.808 * log(length.micro/1e3)))) / 1e3,
+    taxon == "Mesostigmata" ~ (10^(2.064 + (2.857 * log(length.micro/1e3)))) / 1e3)) %>% 
+  drop_na()
+
+plot(acari.masses$length.micro/1e3, acari.masses$FreshMass.mg)
 
 
-comp.2 = in_core %>% rename(Treatment = Subplot) %>% 
+
+
+
+comp.2 = in_core %>% #rename(Treatment = Subplot) %>% 
   full_join(., raw.acari, by = join_by(Plot,Treatment)) %>% 
   select(1:2,4,9:11) %>% 
   #arrange(Plot,Treatment) %>% 
@@ -195,7 +239,7 @@ meso = # mesofauna as counted during sorting to groups
        in_core %>% 
   # combined with identified acari
   full_join(., raw.acari, by = join_by(Plot,Treatment)) %>% 
-  # and idenitfied collembola
+  # and identified collembola
   full_join(., df_new, by = join_by(Plot,Treatment)) %>% 
   # drop comments
   select(-Comments) %>% 
@@ -219,4 +263,43 @@ meso = # mesofauna as counted during sorting to groups
             Oribatida = Acari*(Oribatida    / denominator),
          Mesostigmata = Acari*(Mesostigmata / denominator),
          ProAstigmata = Acari*(ProAstigmata / denominator)) %>% 
-  select(-c(Acari, denominator))
+  select(-c(Acari, denominator)) %>% 
+  # grouping Collembola to functional groups
+  mutate(.keep = "unused", 
+          Edaphic.Entomobryomorpha = Isotomidae,
+               Edaphic.Neelipleona = Neelidae,
+              Edaphic.Poduromorpha = sum(Onychiuridae, 
+                                         Tullbergiidae),
+              Epigeic.Symphypleona = sum(Dicyrtomidae,
+                                         Katiannidae,
+                                         Sminthuridae,
+                                         `Synphypleona juv.`),
+          Epigeic.Entomobryomorpha = Entomobryidae,
+              Epigeic.Poduromorpha = sum(Hypogastruridae, 
+                                         Neanuridae)) %>% 
+  # same as for mites but for Collembola
+  # (only relevant for cases where we counted more than were identified
+  rowwise() %>%
+  mutate(denominator = sum(Edaphic.Entomobryomorpha, 
+                           Edaphic.Neelipleona, 
+                           Edaphic.Poduromorpha, 
+                           Epigeic.Symphypleona,
+                           Epigeic.Entomobryomorpha,
+                           Epigeic.Poduromorpha),
+         Edaphic.Entomobryomorpha = Collembola*(Edaphic.Entomobryomorpha / denominator),
+         Edaphic.Neelipleona      = Collembola*(Edaphic.Neelipleona      / denominator),
+         Edaphic.Poduromorpha     = Collembola*(Edaphic.Poduromorpha     / denominator),
+         Epigeic.Symphypleona     = Collembola*(Epigeic.Symphypleona     / denominator),
+         Epigeic.Entomobryomorpha = Collembola*(Epigeic.Entomobryomorpha / denominator),
+         Epigeic.Poduromorpha     = Collembola*(Epigeic.Poduromorpha     / denominator)) %>% 
+  select(-c(Collembola, denominator)) %>% 
+  # (in.core divided by surface sampled to get density per cm^2, 
+  #  then multiplying by 1e4 to get density per m^2)
+  mutate(across(where(is.numeric), ~ (./(pi*(2.5)^2))*1e4),
+         # then I round up to get whole individuals 
+         # (necessary for sampling bodymass distributions)
+         across(where(is.numeric), ceiling))
+
+
+
+

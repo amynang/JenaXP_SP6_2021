@@ -3,7 +3,7 @@ library(openxlsx)
 
 ############################ in-core Abundances ################################
 
-# the following exclude Hymenoptera, Formicidae, Lumbicidae, Enchytraedae, "Larven, Puppen"
+# the following exclude Hymenoptera, Formicidae, Lumbricidae, Enchytraedae, "Larven, Puppen"
 raw.1 = read.xlsx("H:\\JenaSP6_2021\\August 22 Angelos Jena Experiment fertige Zählliste B1, B2,B3, B4_macrofauna.xlsx",
                   sheet = "Block 1",
                   startRow = 2,
@@ -52,8 +52,23 @@ macro = bind_rows(raw.1, raw.2, raw.3, raw.4) %>%
          Hemiptera = Rynchota + `Rynchota./.Larven`) %>% 
   mutate(.before = Thysanoptera,
          Plot = str_split(.$Plotcode, "-", simplify = T)[,1],
-         Treatment = str_split(.$Plotcode, "T", simplify = T)[,2],) %>% 
-  select(-Plotcode)
+         Treatment = str_split(.$Plotcode, "T", simplify = T)[,2],
+         Treatment = paste0("Treatment", Treatment)) %>% 
+  rowwise() %>% 
+  mutate(.keep = "unused",
+         # this is terrible but we don't know what the larvae are
+         Coleoptera = sum(Staphylinidae, Coleptera, Coleoptera.Larven),
+         # I am assuming that the adult flies found in the sample 
+         # emerged from the soil between sampling and extraction
+         # (rather than coming through the window)
+         Diptera.larvae = sum(Diptera, Diptera.Larven)) %>% 
+  select(-c(Plotcode, Pseudoscorpiones, Opiliones)) %>% 
+  # (in.core divided by surface sampled to get density per cm^2, 
+  #  then multiplying by 1e4 to get density per m^2)
+  mutate(across(where(is.numeric), ~ (./(pi*(7.5)^2))*1e4),
+         # then I round up to get whole individuals 
+         # (necessary for sampling bodymass distributions)
+         across(where(is.numeric), ceiling))
 
 macro$Plot[macro$Plot == "BA305"] = "B3A05"
 
@@ -141,6 +156,56 @@ all %>% as.data.frame() %>%
   density() %>% 
   plot()
 
-plot(density(log(all[all$taxon == "Hemiptera",]$FreshMass.mg)))
+plot(density(log10(all[all$taxon == "Hemiptera",]$FreshMass.mg)))
 
-hist(log(all[all$taxon == "Chilopoda",]$FreshMass.mg), breaks = 100)
+hist(log(all[all$taxon == "Hemiptera",]$FreshMass.mg), breaks = 100)
+
+
+
+library(brms)
+m = brm(bf(log10(FreshMass.mg) #| trunc(lb = 0.02, ub = 44) 
+           ~ 1 + (1|Probe),
+           sigma ~ 1 + (1|Probe)), 
+        data = all[all$taxon == "Araneae",],
+        #family = lognormal,
+        family = gaussian(),
+        #prior = c(prior(lognormal(-0.4581454, 0.6999362), class = Intercept),
+        #          prior(exponential(1), class = sd)),
+        cores = 4, 
+        chains = 4, 
+        control = list( adapt_delta = .95),
+        backend = "cmdstanr")
+pp_check(m, ndraws = 100)
+summary(m)
+
+m %>% conditional_effects(effect = "Probe",
+                          #robust = F,
+                          re_formula = NULL)
+
+
+m = brm(bf(log10(FreshMass.mg) #| trunc(lb = 0.02, ub = 44) 
+           ~ taxon + (taxon|Probe),
+           sigma ~ taxon + (taxon|Probe)), 
+        data = all,
+        #family = lognormal,
+        family = gaussian(),
+        #prior = c(prior(lognormal(-0.4581454, 0.6999362), class = Intercept),
+        #          prior(exponential(1), class = sd)),
+        cores = 4, 
+        chains = 4, 
+        control = list( adapt_delta = .9),
+        backend = "cmdstanr")
+pp_check(m, ndraws = 100)
+summary(m)
+
+
+
+
+
+
+
+curve(10^(.159 + .33 *log10(x)), from = 1e-5, to = 1e1)
+curve(10^(.175 + .281*log10(x)), from = 1e-5, to = 1e1, add = T)
+curve(10^(.143 + .379*log10(x)), from = 1e-5, to = 1e1, add = T)
+curve(10^(.175 + .379*log10(x)), from = 1e-5, to = 1e1, add = T)
+curve(10^(.143 + .281*log10(x)), from = 1e-5, to = 1e1, add = T)
