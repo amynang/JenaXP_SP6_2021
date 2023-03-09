@@ -256,6 +256,7 @@ micro = data.7 %>%
   rename(Rhabditidae = `Rhabditidae-dauer larvae`,
          Criconemoides.y = Macroposthonia,
          Criconemoides.x = Criconemoides) %>% 
+  #select(-Rhabditidae) %>% # I guess, dauer larve as dormant are not included in the foodweb
   rowwise() %>% 
   mutate(.keep = "unused",
          Bacterivore.nematodes = sum(pick(any_of(Bacterivore.nematodes))),
@@ -268,6 +269,65 @@ micro = data.7 %>%
          across(where(is.numeric), ceiling))
 
 
+
+mean.micro.masses = ecophys %>% 
+  mutate(AvgMass = (AvgMass*1e-3)/.2,
+         StDevMass = (StDevMass*1e-3)/.2) %>% 
+  group_by(feeding.type) %>% 
+  summarise(N = n(),
+            MeanMass.mg = mean(AvgMass),
+            StDMass.mg = sqrt(sum(StDevMass^2)/N)) %>% select(-N) %>% 
+  mutate(feeding.type = case_when(feeding.type == "herbivore"   ~ "Herbivore.nematodes",
+                                  feeding.type == "fungivore"   ~ "Fungivore.nematodes",
+                                  feeding.type == "bacterivore" ~ "Bacterivore.nematodes",
+                                  feeding.type == "predator"    ~ "Predator.nematodes",
+                                  feeding.type == "omnivore"    ~ "Omnivore.nematodes")) %>% 
+  rename(taxon = feeding.type)
+
+
+
+
+mean.micro.masses = data.7 %>% 
+  mutate(.after = plot,
+         .keep = "unused",
+         Plot = str_split(.$Sample, "D", simplify = T)[,1],
+         Treatment = paste0("Treatment", treatment)) %>% 
+  select(-c(Sample, block, plot)) %>% 
+  rename(Rhabditidae = `Rhabditidae-dauer larvae`,
+         Criconemoides.y = Macroposthonia,
+         Criconemoides.x = Criconemoides) %>% 
+  pivot_longer(3:66,
+               names_to = "Taxon",
+               values_to = "abundance") %>% 
+  mutate(across(where(is.numeric), ceiling)) %>% 
+  filter(abundance>0) %>% 
+  mutate(taxon = ecophys$feeding.type[match(.$Taxon, ecophys$Taxon)],
+         # /1e3 to go from micro to mg, then divided by .2 (dry mass 20% of fresh mass)
+         AvgMass = (ecophys$AvgMass[match(.$Taxon, ecophys$Taxon)]*1e-3)/.2,
+         StDevMass = (ecophys$StDevMass[match(.$Taxon, ecophys$Taxon)]*1e-3)/.2) %>% 
+  group_by(taxon) %>% 
+  summarise(mean.abun = mean(abundance),
+            MeanMass.mg = Hmisc::wtd.mean(AvgMass, mean.abun),
+            StDMass.mg = jtools::wtd.sd(StDevMass, mean.abun)) %>% 
+  group_by(taxon) %>% 
+  summarise(N = n(),
+            MeanMass.mg = mean(MeanMass.mg),
+            StDMass.mg = sqrt(sum(StDMass.mg^2)/N)) %>% 
+  mutate(taxon = case_when(taxon == "herbivore"   ~ "Herbivore.nematodes",
+                           taxon == "fungivore"   ~ "Fungivore.nematodes",
+                           taxon == "bacterivore" ~ "Bacterivore.nematodes",
+                           taxon == "predator"    ~ "Predator.nematodes",
+                           taxon == "omnivore"    ~ "Omnivore.nematodes"))
+  
+  
+  
+  
+
+
+
+
+Hmisc::wtd.mean()
+Hmisc::wtd.var()
 
 # Change to synonym accepted by Nemaplex
 taxa[taxa == "Macroposthonia"] = "Criconemoides"

@@ -129,7 +129,7 @@ for (i in c("Chilopoda","Diplopoda","Isopoda",
 }
 
 
-all = do.call(rbind.data.frame, l_w_list) %>% drop_na() %>% 
+macro.masses = do.call(rbind.data.frame, l_w_list) %>% drop_na() %>% 
   # is width larger than length?
   mutate(weird = length_micro < width_micro) %>% 
   # drop those weird ones
@@ -149,32 +149,45 @@ all = do.call(rbind.data.frame, l_w_list) %>% drop_na() %>%
                                   taxon ==     "Diplopoda" ~ 10^(-1.400 + (2.443 * log10(length_micro/1e3)) + (0.215 * log10(width_micro/1e3))))
   )
 
+mean.macro.masses = macro.masses %>% 
+                    mutate(taxon = ifelse(taxon == "Staphylinidae", "Coleoptera", taxon)) %>% 
+                    group_by(taxon) %>% 
+                    summarise(N = n(),
+                              MeanMass.mg = mean(FreshMass.mg),
+                              StDMass.mg = sd(FreshMass.mg)) %>% 
+  # I know things
+  add_row(taxon = "Diptera.larvae",
+          MeanMass.mg = 0.249,
+          StDMass.mg = 0.0578) %>% 
+  filter(!(taxon %in% c("Lumbricidae","Formicidae")))
 
-all %>% as.data.frame() %>% 
+
+
+macro.masses %>% as.data.frame() %>% 
   filter(taxon == "Araneae") %>% 
   select(FreshMass.mg) %>% is.numeric()
   density() %>% 
   plot()
 
-plot(density((all[all$taxon == "Araneae",]$FreshMass.mg)))
+plot(density((macro.masses[macro.masses$taxon == "Araneae",]$FreshMass.mg)))
 
-hist(log(all[all$taxon == "Hemiptera",]$FreshMass.mg), breaks = 100)
+hist(log(macro.masses[macro.masses$taxon == "Hemiptera",]$FreshMass.mg), breaks = 100)
 
 
-min(all[all$taxon == "Chilopoda",]$FreshMass.mg);max(all[all$taxon == "Chilopoda",]$FreshMass.mg);mean(all[all$taxon == "Chilopoda",]$FreshMass.mg);sd(all[all$taxon == "Chilopoda",]$FreshMass.mg)
-plot(density((all[all$taxon == "Chilopoda",]$FreshMass.mg)))
+min(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg);max(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg);mean(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg);sd(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg)
+plot(density((macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg)))
 dum = rlnormtrunc.intuitive(5000, 
-                            mean(all[all$taxon == "Chilopoda",]$FreshMass.mg), 
-                            sd(all[all$taxon == "Chilopoda",]$FreshMass.mg),
-                            min = min(all[all$taxon == "Chilopoda",]$FreshMass.mg),
-                            max = max(all[all$taxon == "Chilopoda",]$FreshMass.mg))
+                            mean(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg), 
+                            sd(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg),
+                            min = min(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg),
+                            max = max(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg))
 min(dum);max(dum);mean(dum);sd(dum)
 plot(density(dum))
 
 rlnormtrunc.intuitive(5000, 
-                      mean(all[all$taxon == "Hemiptera",]$FreshMass.mg), 
-                      sd(all[all$taxon == "Hemiptera",]$FreshMass.mg),
-                      max = max(all[all$taxon == "Hemiptera",]$FreshMass.mg)) 
+                      mean(macro.masses[macro.masses$taxon == "Hemiptera",]$FreshMass.mg), 
+                      sd(macro.masses[macro.masses$taxon == "Hemiptera",]$FreshMass.mg),
+                      max = max(macro.masses[macro.masses$taxon == "Hemiptera",]$FreshMass.mg)) 
 
 
 dlnormtrunc.intuitive = function(x, m, s, p=.9) {

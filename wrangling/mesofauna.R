@@ -112,14 +112,14 @@ coll.traits = coll.traits %>% mutate(Order = case_when(Family %in% c("Dicyrtomid
 #                      sheet = "Counts") %>% 
 #   slice(-c(131,137,190,241:243))
 
-comp.1 = in_core %>% #rename(Treatment = Subplot) %>% 
-  full_join(., df_new, by = join_by(Plot,Subplot)) %>% 
-  select(1:3,9) %>% 
-  #arrange(Plot,Treatment) %>% 
-  rowwise() %>% 
-  mutate(.after = `Collembola total`,
-         d = `Collembola total` - Collembola,
-         r = `Collembola total` / Collembola )
+# comp.1 = in_core %>% #rename(Treatment = Subplot) %>% 
+#   full_join(., df_new, by = join_by(Plot,Subplot)) %>% 
+#   select(1:3,9) %>% 
+#   #arrange(Plot,Treatment) %>% 
+#   rowwise() %>% 
+#   mutate(.after = `Collembola total`,
+#          d = `Collembola total` - Collembola,
+#          r = `Collembola total` / Collembola )
 
 
 # create a plot-subplot dataframe
@@ -222,15 +222,15 @@ plot(acari.masses$length.micro/1e3, acari.masses$FreshMass.mg)
 
 
 
-comp.2 = in_core %>% #rename(Treatment = Subplot) %>% 
-  full_join(., raw.acari, by = join_by(Plot,Treatment)) %>% 
-  select(1:2,4,9:11) %>% 
-  #arrange(Plot,Treatment) %>% 
-  rowwise() %>% 
-  mutate(.after = Acari,
-         sumIDd = sum(Oribatida,Mesostigmata,`Prostigmata.+.Astigmata`),
-         d = sumIDd - Acari,
-         r = sumIDd / Acari )
+# comp.2 = in_core %>% #rename(Treatment = Subplot) %>% 
+#   full_join(., raw.acari, by = join_by(Plot,Treatment)) %>% 
+#   select(1:2,4,9:11) %>% 
+#   #arrange(Plot,Treatment) %>% 
+#   rowwise() %>% 
+#   mutate(.after = Acari,
+#          sumIDd = sum(Oribatida,Mesostigmata,`Prostigmata.+.Astigmata`),
+#          d = sumIDd - Acari,
+#          r = sumIDd / Acari )
 
 # B1A12T1 <-> B1A122T3
 
@@ -247,10 +247,10 @@ meso = # mesofauna as counted during sorting to groups
   rename(Collembola.in = Collembola,
          Collembola.out = `Collembola total`,
          Acari.in = Acari,
-         ProAstigmata = `Prostigmata.+.Astigmata`) %>% 
+         Prostigmata = `Prostigmata.+.Astigmata`) %>% 
   rowwise() %>% 
   mutate(.after = Acari.in,
-         Acari.out = sum(Oribatida,Mesostigmata,ProAstigmata),
+         Acari.out = sum(Oribatida,Mesostigmata,Prostigmata),
          # there are small discrepancies between in and out, I am assuming that 
          # the largest number is more reliable... (worth a sensitivity analysis)
          Acari = max(Acari.in,Acari.out, na.rm = T),
@@ -259,10 +259,10 @@ meso = # mesofauna as counted during sorting to groups
   # this will scale proportions of the tree groups to the number of mites counted
   # (only relevant for cases where we counted more than were identified
   rowwise() %>%
-  mutate(  denominator = sum(Oribatida,Mesostigmata,ProAstigmata),
+  mutate(  denominator = sum(Oribatida,Mesostigmata,Prostigmata),
             Oribatida = Acari*(Oribatida    / denominator),
          Mesostigmata = Acari*(Mesostigmata / denominator),
-         ProAstigmata = Acari*(ProAstigmata / denominator)) %>% 
+         Prostigmata = Acari*(Prostigmata / denominator)) %>% 
   select(-c(Acari, denominator)) %>% 
   # grouping Collembola to functional groups
   mutate(.keep = "unused", 
@@ -300,6 +300,17 @@ meso = # mesofauna as counted during sorting to groups
          # (necessary for sampling bodymass distributions)
          across(where(is.numeric), ceiling))
 
+meso.masses = other.masses %>% 
+              full_join(collembola.masses) %>% 
+              select(-length.mm) %>% 
+              full_join(.,
+                        acari.masses %>% select(-length.micro))
 
-
-
+mean.meso.masses = meso.masses %>% 
+                   mutate(taxon = case_when(taxon %in% coll.traits$Family ~ coll.traits$form_Order[match(.$taxon, coll.traits$Family)],
+                                            TRUE ~ taxon)) %>% 
+                   group_by(taxon) %>% 
+                   summarise(N = n(),
+                             MeanMass.mg = mean(FreshMass.mg),
+                              StDMass.mg = sd(FreshMass.mg))
+                        
