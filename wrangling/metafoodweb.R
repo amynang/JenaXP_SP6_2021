@@ -139,3 +139,84 @@ int_f <- function(x, mu1, mu2, sd1, sd2) {
       c(nematodes,meso,macro)] = checkthat
   
 colSums(mat)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+att = micro.meso.macro %>% 
+  mutate(.before = everything(),
+  ID = paste0(Plot,Treatment)) %>% 
+  pivot_longer(4:29,
+               names_to = "taxon",
+               values_to = "abundance") %>% 
+  mutate(MeanMass.mg = mean.masses$MeanMass.mg[match(.$taxon, mean.masses$taxon)],
+          StDMass.mg = mean.masses$StDMass.mg[match(.$taxon, mean.masses$taxon)]) %>%
+  filter(abundance>0) %>% 
+  split(., with(.,ID))
+
+
+
+# this will take a while...
+for (i in 1:240) {
+  att[[i]] = att[[i]] %>%   
+    # biomass and population level metabolism (J/h)
+    # the function will take as arguments the nth element of vectors Abundance, 
+    # MeanMass.mg, StDMass.mg and return a list of vectors
+    # every vector contains sampled bodymasses for the nth taxon
+    mutate(random.individuals = pmap(list(ceiling(att[[i]]$abundance), # how many draws
+                                          att[[i]]$MeanMass.mg,        # mean
+                                          att[[i]]$StDMass.mg,         # sd
+                                          .99),                        # quantile
+                                     rlnormtrunc.intuitive)) %>% 
+    rowwise() %>% 
+    # now we sum the mass of all individuals of a taxon
+    mutate(Biomass.mg = sum(random.individuals)) %>% 
+    # and we also calculate metabolic losses of every individiual and sum them 
+    # to get population level losses
+    mutate(Pop.met.rate = case_when(# based on Ehnes 2011 10.1111/j.1461-0248.2011.01660.x
+      # The general relationship (linear model)
+      TRUE ~ sum(exp(23.055335 + .6950710*log(random.individuals) - .6864200*(1/(8.62*1e-5*(20+273.15))))),
+      # group specific coefficients (phylogenetic model)
+      taxon ==      "Araneae" ~ sum(exp(24.581475 + .5652537*log(random.individuals) - .7093476*(1/(8.62*1e-5*(20+273.15))))),
+      taxon %in% c("Coleoptera",
+                   "Hemiptera",
+                   "Thysanoptera",
+                   "Diptera.larvae") ~ sum(exp(21.972050 + .7588950*log(random.individuals) - .6574038*(1/(8.62*1e-5*(20+273.15))))),
+      taxon ==      "Isopoda" ~ sum(exp(23.168652 + .5544768*log(random.individuals) - .6867293*(1/(8.62*1e-5*(20+273.15))))),
+      taxon ==    "Chilopoda" ~ sum(exp(28.252911 + .5580991*log(random.individuals) - .8030069*(1/(8.62*1e-5*(20+273.15))))),
+      taxon ==    "Diplopoda" ~ sum(exp(22.347024 + .5713411*log(random.individuals) - .6700449*(1/(8.62*1e-5*(20+273.15))))),
+      taxon ==    "Oribatida" ~ sum(exp(22.022770 + .6793706*log(random.individuals) - .7060855*(1/(8.62*1e-5*(20+273.15))))),
+      taxon ==  "Prostigmata" ~ sum(exp(10.281495 + .6599399*log(random.individuals) - .4125318*(1/(8.62*1e-5*(20+273.15))))),
+      taxon == "Mesostigmata" ~ sum(exp(9.6740230 + .6904864*log(random.individuals) - .3792541*(1/(8.62*1e-5*(20+273.15)))))))
+  
+  cat('\014')
+  #cat(paste0(round((m/1600)*100), '%'))
+  cat(paste0(i, '/', length(att)))
+  #Sys.sleep(.05)
+  if (i == length(att)) cat('- Done!')
+}
+
+beepr::beep(9)
+
+
