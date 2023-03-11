@@ -163,141 +163,145 @@ mean.macro.masses = macro.masses %>%
 
 
 
-macro.masses %>% as.data.frame() %>% 
-  filter(taxon == "Araneae") %>% 
-  select(FreshMass.mg) %>% is.numeric()
-  density() %>% 
-  plot()
-
-plot(density((macro.masses[macro.masses$taxon == "Araneae",]$FreshMass.mg)))
-
-hist(log(macro.masses[macro.masses$taxon == "Hemiptera",]$FreshMass.mg), breaks = 100)
-
-
-min(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg);max(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg);mean(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg);sd(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg)
-plot(density((macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg)))
-dum = rlnormtrunc.intuitive(5000, 
-                            mean(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg), 
-                            sd(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg),
-                            min = min(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg),
-                            max = max(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg))
-min(dum);max(dum);mean(dum);sd(dum)
-plot(density(dum))
-
-rlnormtrunc.intuitive(5000, 
-                      mean(macro.masses[macro.masses$taxon == "Hemiptera",]$FreshMass.mg), 
-                      sd(macro.masses[macro.masses$taxon == "Hemiptera",]$FreshMass.mg),
-                      max = max(macro.masses[macro.masses$taxon == "Hemiptera",]$FreshMass.mg)) 
-
-
-dlnormtrunc.intuitive = function(x, m, s, p=.9) {
-  trnc <- EnvStats::dlnormTrunc(x, 
-                                meanlog = log(m^2 / sqrt(s^2 + m^2)), 
-                                sdlog = sqrt(log(1 + (s^2 / m^2))), 
-                                min = qlnorm((1-p)/2, 
-                                             meanlog = log(m^2 / sqrt(s^2 + m^2)), 
-                                             sdlog = sqrt(log(1 + (s^2 / m^2)))), 
-                                max = qlnorm(1-(1-p)/2, 
-                                             meanlog = log(m^2 / sqrt(s^2 + m^2)), 
-                                             sdlog = sqrt(log(1 + (s^2 / m^2)))))
-  return(trnc)
-}
-
-rlnormtrunc.intuitive = function(n, m, s, p=.9) {
-  trnc <- EnvStats::rlnormTrunc(n, 
-                                meanlog = log(m^2 / sqrt(s^2 + m^2)), 
-                                sdlog = sqrt(log(1 + (s^2 / m^2))), 
-                                min = qlnorm((1-p)/2, 
-                                             meanlog = log(m^2 / sqrt(s^2 + m^2)), 
-                                             sdlog = sqrt(log(1 + (s^2 / m^2)))), 
-                                max = qlnorm(1-(1-p)/2, 
-                                             meanlog = log(m^2 / sqrt(s^2 + m^2)), 
-                                             sdlog = sqrt(log(1 + (s^2 / m^2)))))
-  return(trnc)
-}
-
-rlnormtrunc.intuitive = function(n, m, s, min, max) {
-  trnc <- EnvStats::rlnormTrunc(n, 
-                                meanlog = log(m^2 / sqrt(s^2 + m^2)), 
-                                sdlog = sqrt(log(1 + (s^2 / m^2))), 
-                                min = min, 
-                                max = max)
-  return(trnc)
-}
-
-
-
-
-
-df <- data.frame(
-  Data=factor(rep(c("D1", "D2"), each=2000)),
-  weight=c(log(rlnormtrunc.intuitive(2000, m=1.672674/4, s=4.982685/4, p=1)),
-           log(rlnormtrunc.intuitive(2000, m=1.672674,  s=4.982685, p=1)))
-)
-#df$weight = log10(df$weight)
-d1dens <- with(df, density(weight[Data == "D1"], 
-                           from = min(weight), 
-                           to = max(weight)))
-d2dens <- with(df, density(weight[Data == "D2"], 
-                           from = min(weight),
-                           to = max(weight)))
-joint <- pmin(d1dens$y, d2dens$y)
-
-df2 <- data.frame(x = rep(d1dens$x, 3), 
-                  y = c(d1dens$y, d2dens$y, joint),
-                  Data = rep(c("D1", "D2", "overlap"), each = length(d1dens$x)))
-
-ggplot(df2, aes(x, y, fill = Data)) + 
-  geom_area(position = position_identity(), color = "black") +
-  scale_fill_brewer(palette = "Pastel2") +
-  theme_bw()
-
-
-
-library(brms)
-m = brm(bf(log10(FreshMass.mg) #| trunc(lb = 0.02, ub = 44) 
-           ~ 1 + (1|Probe),
-           sigma ~ 1 + (1|Probe)), 
-        data = all[all$taxon == "Araneae",],
-        #family = lognormal,
-        family = gaussian(),
-        #prior = c(prior(lognormal(-0.4581454, 0.6999362), class = Intercept),
-        #          prior(exponential(1), class = sd)),
-        cores = 4, 
-        chains = 4, 
-        control = list( adapt_delta = .95),
-        backend = "cmdstanr")
-pp_check(m, ndraws = 100)
-summary(m)
-
-m %>% conditional_effects(effect = "Probe",
-                          #robust = F,
-                          re_formula = NULL)
-
-
-m = brm(bf(log10(FreshMass.mg) #| trunc(lb = 0.02, ub = 44) 
-           ~ taxon + (taxon|Probe),
-           sigma ~ taxon + (taxon|Probe)), 
-        data = all,
-        #family = lognormal,
-        family = gaussian(),
-        #prior = c(prior(lognormal(-0.4581454, 0.6999362), class = Intercept),
-        #          prior(exponential(1), class = sd)),
-        cores = 4, 
-        chains = 4, 
-        control = list( adapt_delta = .9),
-        backend = "cmdstanr")
-pp_check(m, ndraws = 100)
-summary(m)
-
-
-
-
-
-
-curve((.159 + .33 *log10(x)), from = 1e-5, to = 1e1)
-curve(10^(.159 + .33 *log10(x)), from = 1e-3, to = 1e1)
-curve(10^(.175 + .281*log10(x)), from = 1e-5, to = 1e1, add = T)
-curve(10^(.143 + .379*log10(x)), from = 1e-5, to = 1e1, add = T)
-curve(10^(.175 + .379*log10(x)), from = 1e-5, to = 1e1, add = T)
-curve(10^(.143 + .281*log10(x)), from = 1e-5, to = 1e1, add = T)
+# macro.masses %>% as.data.frame() %>% 
+#   filter(taxon == "Araneae") %>% 
+#   select(FreshMass.mg) %>% is.numeric()
+#   density() %>% 
+#   plot()
+# 
+# plot(density((macro.masses[macro.masses$taxon == "Araneae",]$FreshMass.mg)))
+# 
+# hist(log(macro.masses[macro.masses$taxon == "Hemiptera",]$FreshMass.mg), breaks = 100)
+# 
+# 
+# min(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg);max(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg);mean(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg);sd(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg)
+# plot(density((macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg)))
+# dum = rlnormtrunc.intuitive(5000, 
+#                             mean(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg), 
+#                             sd(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg),
+#                             min = min(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg),
+#                             max = max(macro.masses[macro.masses$taxon == "Chilopoda",]$FreshMass.mg))
+# min(dum);max(dum);mean(dum);sd(dum)
+# plot(density(dum))
+# 
+# rlnormtrunc.intuitive(5000, 
+#                       mean(macro.masses[macro.masses$taxon == "Hemiptera",]$FreshMass.mg), 
+#                       sd(macro.masses[macro.masses$taxon == "Hemiptera",]$FreshMass.mg),
+#                       max = max(macro.masses[macro.masses$taxon == "Hemiptera",]$FreshMass.mg)) 
+# 
+# 
+# dlnormtrunc.intuitive = function(x, m, s, p=.9) {
+#   trnc <- EnvStats::dlnormTrunc(x, 
+#                                 meanlog = log(m^2 / sqrt(s^2 + m^2)), 
+#                                 sdlog = sqrt(log(1 + (s^2 / m^2))), 
+#                                 min = qlnorm((1-p)/2, 
+#                                              meanlog = log(m^2 / sqrt(s^2 + m^2)), 
+#                                              sdlog = sqrt(log(1 + (s^2 / m^2)))), 
+#                                 max = qlnorm(1-(1-p)/2, 
+#                                              meanlog = log(m^2 / sqrt(s^2 + m^2)), 
+#                                              sdlog = sqrt(log(1 + (s^2 / m^2)))))
+#   return(trnc)
+# }
+# 
+# rlnormtrunc.intuitive = function(n, m, s, p=.9) {
+#   trnc <- EnvStats::rlnormTrunc(n, 
+#                                 meanlog = log(m^2 / sqrt(s^2 + m^2)), 
+#                                 sdlog = sqrt(log(1 + (s^2 / m^2))), 
+#                                 min = qlnorm((1-p)/2, 
+#                                              meanlog = log(m^2 / sqrt(s^2 + m^2)), 
+#                                              sdlog = sqrt(log(1 + (s^2 / m^2)))), 
+#                                 max = qlnorm(1-(1-p)/2, 
+#                                              meanlog = log(m^2 / sqrt(s^2 + m^2)), 
+#                                              sdlog = sqrt(log(1 + (s^2 / m^2)))))
+#   return(trnc)
+# }
+# 
+# rlnormtrunc.intuitive = function(n, m, s, min, max) {
+#   trnc <- EnvStats::rlnormTrunc(n, 
+#                                 meanlog = log(m^2 / sqrt(s^2 + m^2)), 
+#                                 sdlog = sqrt(log(1 + (s^2 / m^2))), 
+#                                 min = min, 
+#                                 max = max)
+#   return(trnc)
+# }
+# 
+# 
+# 
+# 
+# 
+# df <- data.frame(
+#   Data=factor(rep(c("D1", "D2"), each=2000)),
+#   weight=c(log(rlnormtrunc.intuitive(2000, m=1.672674/4, s=4.982685/4, p=1)),
+#            log(rlnormtrunc.intuitive(2000, m=1.672674,  s=4.982685, p=1)))
+# )
+# #df$weight = log10(df$weight)
+# d1dens <- with(df, density(weight[Data == "D1"], 
+#                            from = min(weight), 
+#                            to = max(weight)))
+# d2dens <- with(df, density(weight[Data == "D2"], 
+#                            from = min(weight),
+#                            to = max(weight)))
+# joint <- pmin(d1dens$y, d2dens$y)
+# 
+# df2 <- data.frame(x = rep(d1dens$x, 3), 
+#                   y = c(d1dens$y, d2dens$y, joint),
+#                   Data = rep(c("D1", "D2", "overlap"), each = length(d1dens$x)))
+# 
+# ggplot(df2, aes(x, y, fill = Data)) + 
+#   geom_area(position = position_identity(), color = "black") +
+#   scale_fill_brewer(palette = "Pastel2") +
+#   theme_bw()
+# 
+# 
+# 
+# library(brms)
+# m = brm(bf(log10(FreshMass.mg) #| trunc(lb = 0.02, ub = 44) 
+#            ~ 1 + (1|Probe),
+#            sigma ~ 1 + (1|Probe)), 
+#         data = all[all$taxon == "Araneae",],
+#         #family = lognormal,
+#         family = gaussian(),
+#         #prior = c(prior(lognormal(-0.4581454, 0.6999362), class = Intercept),
+#         #          prior(exponential(1), class = sd)),
+#         cores = 4, 
+#         chains = 4, 
+#         control = list( adapt_delta = .95),
+#         backend = "cmdstanr")
+# pp_check(m, ndraws = 100)
+# summary(m)
+# 
+# m %>% conditional_effects(effect = "Probe",
+#                           #robust = F,
+#                           re_formula = NULL)
+# 
+# 
+# m = brm(bf(log10(FreshMass.mg) #| trunc(lb = 0.02, ub = 44) 
+#            ~ taxon + (taxon|Probe),
+#            sigma ~ taxon + (taxon|Probe)), 
+#         data = all,
+#         #family = lognormal,
+#         family = gaussian(),
+#         #prior = c(prior(lognormal(-0.4581454, 0.6999362), class = Intercept),
+#         #          prior(exponential(1), class = sd)),
+#         cores = 4, 
+#         chains = 4, 
+#         control = list( adapt_delta = .9),
+#         backend = "cmdstanr")
+# pp_check(m, ndraws = 100)
+# summary(m)
+# 
+# 
+# 
+# 
+# 
+# 
+# curve((.159 + .33 *log10(x)), from = 1e-5, to = 1e1)
+# curve(10^(.159 + .33 *log10(x)), from = 1e-3, to = 1e1)
+# curve(10^(.175 + .281*log10(x)), from = 1e-5, to = 1e1, add = T)
+# curve(10^(.143 + .379*log10(x)), from = 1e-5, to = 1e1, add = T)
+# curve(10^(.175 + .379*log10(x)), from = 1e-5, to = 1e1, add = T)
+# curve(10^(.143 + .281*log10(x)), from = 1e-5, to = 1e1, add = T)
+# 
+# 
+# curve(10^(.159 + .33 *log10(x)), from = 1e-3, to = 1e1)
+# abline(h = 1)

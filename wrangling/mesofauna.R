@@ -51,7 +51,7 @@ mean.masses = other.masses %>%
   group_by(Plot, Treatment, taxon) %>% 
   summarise(meanMass.mg = mean(FreshMass.mg, na.rm = T))
 
-plot(other.masses$length.mm, other.masses$FreshMass.mg)
+#plot(other.masses$length.mm, other.masses$FreshMass.mg)
 
 ################################### Collembola #################################
 
@@ -216,7 +216,7 @@ acari.masses = acari.lengths %>%
     taxon == "Mesostigmata" ~ (10^(2.064 + (2.857 * log(length.micro/1e3)))) / 1e3)) %>% 
   drop_na()
 
-plot(acari.masses$length.micro/1e3, acari.masses$FreshMass.mg)
+#plot(acari.masses$length.micro/1e3, acari.masses$FreshMass.mg)
 
 
 
@@ -234,7 +234,7 @@ plot(acari.masses$length.micro/1e3, acari.masses$FreshMass.mg)
 
 # B1A12T1 <-> B1A122T3
 
-
+# !!!!!!!!!!! rowwise is needed once! use ungroup() to revert to columnwise
 meso = # mesofauna as counted during sorting to groups
        in_core %>% 
   # combined with identified acari

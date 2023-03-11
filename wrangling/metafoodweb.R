@@ -2,6 +2,9 @@ library(tidyverse)
 library(cubature)
 source("wrangling/functions.R")
 
+potapov = read.xlsx("H:\\Literature\\brv12857-sup-0003-tables2.xlsx",
+                    sheet = "GroupList") 
+
 micro.meso.macro = full_join(micro, meso, by = join_by(Plot,Treatment)) %>% 
                    full_join(., macro, by = join_by(Plot,Treatment))
   
@@ -11,6 +14,31 @@ mean.masses = mean.micro.masses %>%
   full_join(mean.meso.masses %>% select(-N)) %>% 
   full_join(., mean.macro.masses %>% select(-N)) %>% 
   mutate(taxon = str_replace(.$taxon," ", "."))
+
+# traits that modify feeding interactions
+feeding.traits = mean.masses %>% 
+  mutate(Abbreviation = c("Ne-B","Ne-F","Ne-H","Ne-O","Ne-P",
+                          "Cla-D","Cla-D","Cla-D","Cla-A","Cla-A","Cla-A",
+                          "Me","Ori","Pau","Prost","Protu","Sym",
+                          "Ar","Chi","Cpt","Dpod","Ga","He","Iso","Thy","Dipt")) %>% 
+  mutate(           Agility = potapov$Agility[match(.$Abbreviation, potapov$Abbreviation)],
+                    PhysicalProtection = potapov$PhysicalProtection[match(.$Abbreviation, potapov$Abbreviation)],
+                    Metabolites = potapov$Metabolites[match(.$Abbreviation, potapov$Abbreviation)],
+                    above = potapov$above[match(.$Abbreviation, potapov$Abbreviation)],
+                    epi = potapov$epi[match(.$Abbreviation, potapov$Abbreviation)],
+                    hemi = potapov$hemi[match(.$Abbreviation, potapov$Abbreviation)],
+                    eu = potapov$eu[match(.$Abbreviation, potapov$Abbreviation)])
+
+# vertical stratification similarity
+ver = feeding.traits %>% 
+      select(above,epi,hemi,eu) %>% 
+      vegan::vegdist(method = "bray") %>% 
+      as.matrix() 
+vertical = 1- ver
+
+
+
+
 
 nematodes = names(micro)[-(1:2)]
 meso      =  names(meso)[-(1:2)]  
@@ -80,15 +108,6 @@ mat = vegan::decostand(mat,"total", 2)
 colSums(mat)
 
 
-View(mat[c(nematodes,meso,macro),
-         c(nematodes,meso,macro)])
-
-colSums(mat[c(nematodes,meso,macro),
-            c(nematodes,meso,macro)])
-
-# If I have 1 bodymass distribution per taxon across all locations I can do this once
-# Repeating 135 times is... crazy
-
 # https://rpsychologist.com/calculating-the-overlap-of-two-normal-distributions-using-monte-carlo-integration
 int_f <- function(x, mu1, mu2, sd1, sd2) {
   f1 <- dlnormtrunc.intuitive(x, m=mu1, s=sd1, p=1)
@@ -129,8 +148,19 @@ int_f <- function(x, mu1, mu2, sd1, sd2) {
  
   checkthat = mat[c(nematodes,meso,macro),
                   c(nematodes,meso,macro)]*bodymat
+  
+  # now we multiply by three vectors that modify this relationship based on prey
+  # agility, physical protection or metabolites 
+  # and finaly, a matrix of vertical stratification similarity
+  checkthat = checkthat*
+              feeding.traits$Agility*
+              feeding.traits$PhysicalProtection*
+              feeding.traits$Metabolites*
+              vertical
+  
   # first standardization: animal preferences sum to 1
   checkthat = vegan::decostand(checkthat,"total", 2)
+  
   # second, we have them sum to the complement of whatever else they eat
   # so if we expect that an omnivore eats 50% plants and 50% animals, animal preferences sum to .5
   # we do this by multiplying every row in the matrix with the std vector
@@ -139,24 +169,6 @@ int_f <- function(x, mu1, mu2, sd1, sd2) {
       c(nematodes,meso,macro)] = checkthat
   
 colSums(mat)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -178,6 +190,8 @@ att = micro.meso.macro %>%
 
 
 # this will take a while...
+# re-check everything!!!!!!!!!!!
+set.seed(404)
 for (i in 1:240) {
   att[[i]] = att[[i]] %>%   
     # biomass and population level metabolism (J/h)
@@ -194,21 +208,35 @@ for (i in 1:240) {
     mutate(Biomass.mg = sum(random.individuals)) %>% 
     # and we also calculate metabolic losses of every individiual and sum them 
     # to get population level losses
-    mutate(Pop.met.rate = case_when(# based on Ehnes 2011 10.1111/j.1461-0248.2011.01660.x
+    mutate(Pop.met.rate.J_h = case_when(# based on Ehnes 2011 10.1111/j.1461-0248.2011.01660.x
       # The general relationship (linear model)
       TRUE ~ sum(exp(23.055335 + .6950710*log(random.individuals) - .6864200*(1/(8.62*1e-5*(20+273.15))))),
       # group specific coefficients (phylogenetic model)
       taxon ==      "Araneae" ~ sum(exp(24.581475 + .5652537*log(random.individuals) - .7093476*(1/(8.62*1e-5*(20+273.15))))),
       taxon %in% c("Coleoptera",
-                   "Hemiptera",
-                   "Thysanoptera",
-                   "Diptera.larvae") ~ sum(exp(21.972050 + .7588950*log(random.individuals) - .6574038*(1/(8.62*1e-5*(20+273.15))))),
+                 "Hemiptera",
+              "Thysanoptera",
+            "Diptera.larvae") ~ sum(exp(21.972050 + .7588950*log(random.individuals) - .6574038*(1/(8.62*1e-5*(20+273.15))))),
       taxon ==      "Isopoda" ~ sum(exp(23.168652 + .5544768*log(random.individuals) - .6867293*(1/(8.62*1e-5*(20+273.15))))),
       taxon ==    "Chilopoda" ~ sum(exp(28.252911 + .5580991*log(random.individuals) - .8030069*(1/(8.62*1e-5*(20+273.15))))),
       taxon ==    "Diplopoda" ~ sum(exp(22.347024 + .5713411*log(random.individuals) - .6700449*(1/(8.62*1e-5*(20+273.15))))),
       taxon ==    "Oribatida" ~ sum(exp(22.022770 + .6793706*log(random.individuals) - .7060855*(1/(8.62*1e-5*(20+273.15))))),
       taxon ==  "Prostigmata" ~ sum(exp(10.281495 + .6599399*log(random.individuals) - .4125318*(1/(8.62*1e-5*(20+273.15))))),
-      taxon == "Mesostigmata" ~ sum(exp(9.6740230 + .6904864*log(random.individuals) - .3792541*(1/(8.62*1e-5*(20+273.15)))))))
+      taxon == "Mesostigmata" ~ sum(exp(9.6740230 + .6904864*log(random.individuals) - .3792541*(1/(8.62*1e-5*(20+273.15))))))) %>% 
+    select(-random.individuals) %>% 
+    ungroup() %>% 
+    add_row(#.before = 1,
+      # add basal resources at the top of the dataframes (check that order matches that in mat)
+      taxon = c("roots","detritus","bacteria","fungi"), 
+      Biomass.mg = sum(.$Biomass.mg), # makes omnivores eat equally from everything (only used for standardization)
+      Pop.met.rate.J_h = 0) %>% 
+    mutate(# resource based assimilation efficiency, from Lang et al. 2017
+      temp.kT = ((273.15+20)-293.15)/(8.62*1e-5*(273.15+20)*293.15), # explain
+      efficiency = case_when(taxon == "detritus" ~ exp(-1.670)*exp(.164*temp.kT) / (1 + exp(-1.670)*exp(.164*temp.kT)),
+                             taxon ==   "roots" ~ exp(0.179) *exp(.164*temp.kT) / (1 + exp(0.179) *exp(.164*temp.kT)),
+                             # everything else (including fungi & bacteria???) gets animal prey efficiency
+                             TRUE ~ exp(2.266) *exp(.164*temp.kT) / (1 + exp(2.266) *exp(.164*temp.kT)))) %>% 
+    select(-temp.kT)
   
   cat('\014')
   #cat(paste0(round((m/1600)*100), '%'))
