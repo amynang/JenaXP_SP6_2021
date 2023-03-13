@@ -44,6 +44,8 @@ nematodes = names(micro)[-(1:2)]
 meso      =  names(meso)[-(1:2)]  
 macro     = names(macro)[-(1:2)]
 
+
+########################## Trophic interaction matrix ##########################
 mat = matrix(NA,
              nrow = length(names(micro.meso.macro))+2,
              ncol = length(names(micro.meso.macro))+2,
@@ -115,58 +117,56 @@ int_f <- function(x, mu1, mu2, sd1, sd2) {
   pmin(f1, f2)
 }
 
-#for (i in 1:length(att)) { 
-  # number of taxa
-  n = nrow(mean.masses)
-  # this is not wrong but probably not the simplest way?
-  body.mat = replicate(n, mean.masses$MeanMass.mg)
-  bodymat = body.mat[1:n,]
-  bodymat[,] = 0
+n = nrow(mean.masses)
+# this is not wrong but probably not the simplest way?
+body.mat = replicate(n, mean.masses$MeanMass.mg)
+bodymat = body.mat[1:n,]
+bodymat[,] = 0
   
-  # which cells in the interaction matrix are non zero
-  ind = which(mat[c(nematodes,meso,macro),
-                  c(nematodes,meso,macro)] != 0, arr.ind = T)
-  # we will use this to standardize animal predation in omnivores
-  std = colSums(mat[c(nematodes,meso,macro),
-                    c(nematodes,meso,macro)])
+# which cells in the interaction matrix are non zero
+ind = which(mat[c(nematodes,meso,macro),
+                c(nematodes,meso,macro)] != 0, arr.ind = T)
+# we will use this to standardize animal predation in omnivores
+std = colSums(mat[c(nematodes,meso,macro),
+                  c(nematodes,meso,macro)])
   
-  # vector of bodymasses
-  meanmass = mean.masses$MeanMass.mg
-  sdmass = mean.masses$StDMass.mg
+# vector of bodymasses
+meanmass = mean.masses$MeanMass.mg
+sdmass = mean.masses$StDMass.mg
   
-  for (j in 1:nrow(ind)) { # for every predator-prey pair
-    # we calculate prey suitability as the integral of the overlap of that prey's 
-    # bodymass distribution and the optimal prey distribution for that predator
-    # assuming OPPMR = 10^.6 (optimal prey ~4 times smaller than predator cf Brose 2006)
-    overlap = cubintegrate(int_f, 0, Inf,
-                           mu1=meanmass[ind[j,][2]]/10^.6, # predator/10^.6
-                             sd1=sdmass[ind[j,][2]]/10^.6,
-                           mu2=meanmass[ind[j,][1]],       # prey
-                             sd2=sdmass[ind[j,][1]])$integral
-    bodymat[ind[j,][1],ind[j,][2]] <- overlap
-  }
+for (j in 1:nrow(ind)) { # for every predator-prey pair
+  # we calculate prey suitability as the integral of the overlap of that prey's 
+  # bodymass distribution and the optimal prey distribution for that predator
+  # assuming OPPMR = 10^.6 (optimal prey ~4 times smaller than predator cf Brose 2006)
+  overlap = cubintegrate(int_f, 0, Inf,
+                         mu1=meanmass[ind[j,][2]]/10^.6, # predator/10^.6
+                           sd1=sdmass[ind[j,][2]]/10^.6,
+                         mu2=meanmass[ind[j,][1]],       # prey
+                           sd2=sdmass[ind[j,][1]])$integral
+  bodymat[ind[j,][1],ind[j,][2]] <- overlap
+}
  
-  checkthat = mat[c(nematodes,meso,macro),
-                  c(nematodes,meso,macro)]*bodymat
-  
-  # now we multiply by three vectors that modify this relationship based on prey
-  # agility, physical protection or metabolites 
-  # and finaly, a matrix of vertical stratification similarity
-  checkthat = checkthat*
-              feeding.traits$Agility*
-              feeding.traits$PhysicalProtection*
-              feeding.traits$Metabolites*
-              vertical
-  
-  # first standardization: animal preferences sum to 1
-  checkthat = vegan::decostand(checkthat,"total", 2)
-  
-  # second, we have them sum to the complement of whatever else they eat
-  # so if we expect that an omnivore eats 50% plants and 50% animals, animal preferences sum to .5
-  # we do this by multiplying every row in the matrix with the std vector
-  checkthat = checkthat*rep(std, each=nrow(checkthat))
-  mat[c(nematodes,meso,macro),
-      c(nematodes,meso,macro)] = checkthat
+checkthat = mat[c(nematodes,meso,macro),
+                c(nematodes,meso,macro)]*bodymat
+
+# now we multiply by three vectors that modify this relationship based on prey
+# agility, physical protection or metabolites 
+# and finaly, a matrix of vertical stratification similarity
+checkthat = checkthat*
+            feeding.traits$Agility*
+            feeding.traits$PhysicalProtection*
+            feeding.traits$Metabolites*
+            vertical
+
+# first standardization: animal preferences sum to 1
+checkthat = vegan::decostand(checkthat,"total", 2)
+
+# second, we have them sum to the complement of whatever else they eat
+# so if we expect that an omnivore eats 50% plants and 50% animals, animal preferences sum to .5
+# we do this by multiplying every row in the matrix with the std vector
+checkthat = checkthat*rep(std, each=nrow(checkthat))
+mat[c(nematodes,meso,macro),
+    c(nematodes,meso,macro)] = checkthat
   
 colSums(mat)
 
@@ -174,8 +174,7 @@ colSums(mat)
 
 
 
-
-
+######################### plot specific attributes #############################
 att = micro.meso.macro %>% 
   mutate(.before = everything(),
   ID = paste0(Plot,Treatment)) %>% 
@@ -188,11 +187,28 @@ att = micro.meso.macro %>%
   split(., with(.,ID))
 
 
+########################## parallelised  #######################################
+library(foreach)
+# https://www.blasbenito.com/post/02_parallelizing_loops_with_r/
+parallel::detectCores()
+n.cores <- parallel::detectCores() - 1
+#create the cluster
+my.cluster <- parallel::makeCluster(n.cores, type = "PSOCK")
+#check cluster definition (optional)
+print(my.cluster)
+#register it to be used by %dopar%
+doParallel::registerDoParallel(cl = my.cluster)
+#check if it is registered (optional)
+foreach::getDoParRegistered()
+#how many workers are available? (optional)
+foreach::getDoParWorkers()
 
 # this will take a while...
 # re-check everything!!!!!!!!!!!
 set.seed(404)
-for (i in 1:240) {
+att = foreach(i = 1:240, 
+        #.combine = "c",
+        .packages = c("tidyverse")) %dopar% {
   att[[i]] = att[[i]] %>%   
     # biomass and population level metabolism (J/h)
     # the function will take as arguments the nth element of vectors Abundance, 
@@ -214,9 +230,9 @@ for (i in 1:240) {
       # group specific coefficients (phylogenetic model)
       taxon ==      "Araneae" ~ sum(exp(24.581475 + .5652537*log(random.individuals) - .7093476*(1/(8.62*1e-5*(20+273.15))))),
       taxon %in% c("Coleoptera",
-                 "Hemiptera",
-              "Thysanoptera",
-            "Diptera.larvae") ~ sum(exp(21.972050 + .7588950*log(random.individuals) - .6574038*(1/(8.62*1e-5*(20+273.15))))),
+                   "Hemiptera",
+                   "Thysanoptera",
+                   "Diptera.larvae") ~ sum(exp(21.972050 + .7588950*log(random.individuals) - .6574038*(1/(8.62*1e-5*(20+273.15))))),
       taxon ==      "Isopoda" ~ sum(exp(23.168652 + .5544768*log(random.individuals) - .6867293*(1/(8.62*1e-5*(20+273.15))))),
       taxon ==    "Chilopoda" ~ sum(exp(28.252911 + .5580991*log(random.individuals) - .8030069*(1/(8.62*1e-5*(20+273.15))))),
       taxon ==    "Diplopoda" ~ sum(exp(22.347024 + .5713411*log(random.individuals) - .6700449*(1/(8.62*1e-5*(20+273.15))))),
@@ -228,7 +244,9 @@ for (i in 1:240) {
     add_row(#.before = 1,
       # add basal resources at the top of the dataframes (check that order matches that in mat)
       taxon = c("roots","detritus","bacteria","fungi"), 
-      Biomass.mg = sum(.$Biomass.mg), # makes omnivores eat equally from everything (only used for standardization)
+      Plot = first(.$Plot),
+      Treatment = first(.$Treatment),
+      Biomass.mg = 1, # makes relative biomass matter only among animal resources (only used for standardization of omnivores)
       Pop.met.rate.J_h = 0) %>% 
     mutate(# resource based assimilation efficiency, from Lang et al. 2017
       temp.kT = ((273.15+20)-293.15)/(8.62*1e-5*(273.15+20)*293.15), # explain
@@ -237,14 +255,145 @@ for (i in 1:240) {
                              # everything else (including fungi & bacteria???) gets animal prey efficiency
                              TRUE ~ exp(2.266) *exp(.164*temp.kT) / (1 + exp(2.266) *exp(.164*temp.kT)))) %>% 
     select(-temp.kT)
-  
-  cat('\014')
-  #cat(paste0(round((m/1600)*100), '%'))
-  cat(paste0(i, '/', length(att)))
-  #Sys.sleep(.05)
-  if (i == length(att)) cat('- Done!')
+
+}
+parallel::stopCluster(cl = my.cluster)
+beepr::beep(9)
+
+
+# a list for feeding preference matrices
+mat.prefs = vector(mode = "list",
+                   length=length(att))
+
+web = vector(mode = "list", 
+             length=length(att))
+for (i in 1:length(att)) {
+  web[[i]] = mat[att[[i]]$taxon,
+                 att[[i]]$taxon]
 }
 
-beepr::beep(9)
+for (i in 1:length(att)) {
+  ####################   Omnivores' Balanced Diet Plan   #########################
+  # add biomass values in the matrix to 'manually' define the preferences
+  # first create a matrix with species biomasses
+  mat.bioms = replicate(length(att[[i]]$Biomass.mg), att[[i]]$Biomass.mg)
+  # mat.prefs contains preference of predators based on their prey biomasses
+  mat.prefs[[i]] = web[[i]] * mat.bioms
+  
+  basals = which(att[[i]]$taxon %in% c("roots","detritus","bacteria","fungi"))
+  animals = which(!(att[[i]]$taxon %in% c("roots","detritus","bacteria","fungi")))
+  #omnivores that feed on basals and animals
+  omnivores = which(colSums(mat.prefs[[i]][basals,])>0 &
+                      colSums(mat.prefs[[i]][animals,])>0)
+  # normalize preferences of omnivores over animals to 1: (sum of prey prefs for omn is 1)
+  mat.prefs[[i]][animals, omnivores] = mat.prefs[[i]][animals, omnivores, drop=FALSE] %*%
+    diag(1/colSums(as.matrix(mat.prefs[[i]][animals, omnivores, drop=FALSE])),
+         length(omnivores),length(omnivores)) #diag(4)!=diag(4,1,1) important if single omnivore
+  
+  # now we additionally make this sum to the complement of whatever else they eat
+  std = colSums(web[[i]][animals, 
+                         omnivores])
+  mat.prefs[[i]][animals, 
+                 omnivores] = mat.prefs[[i]][animals, 
+                                             omnivores]*rep(std, 
+                                                            each=nrow(mat.prefs[[i]][animals, 
+                                                                                     omnivores]))
+  
+  mat.prefs[[i]] = vegan::decostand(mat.prefs[[i]], "total", MARGIN = 2)
+  
+}
+
+
+library(fluxweb)
+
+# you need the original mat.prefs list!!!
+thousand = vector(mode = "list",length=1000)
+set.seed(404)
+for (k in 1:1000) { 
+  # a list for flux matrices
+  fluxes = vector(mode = "list",length=length(att))
+  
+  allmetrics = data.frame(Plot = character(length(att)),
+                          Treatment = character(length(att)),
+                          tot.flux = numeric(length(att)),   # total energy flux
+                          pred.flux = numeric(length(att)),  # predation flux
+                          herb.flux = numeric(length(att)),  # herbivory flux
+                          detr.flux = numeric(length(att)),
+                          secon.decomp.flux = numeric(length(att)),
+                          top.down = numeric(length(att)),   # from herbivores per unit herbivore biomass
+                          bot.up = numeric(length(att)),     # to herbivores per unit herbivore biomass
+                          herb.press = numeric(length(att))) # to herbivores per unit plant biomass
+  
+  
+  for (i in 1:length(att)) {
+    
+    ################################# Uncertainty ##################################
+    # Here we take each consumer in the foodweb and replace its fixed preferences 
+    # with a random sample from a dirichlet distribution whose component probabilities 
+    # are given by the vector of the original preferences. The vector is multiplied 
+    # by a scalar that modifies the shape of the distribution (larger = less uncertainty)
+    # Across several iterations our expectations regarding what consumers feed on 
+    # are met, on average. But in each iteration consumer preferences deviate somewhat
+    # from those expected based on intrinsic preference and/or relative availability.
+    for (j in 1: nrow(mat.prefs[[i]])) { 
+      mat.prefs[[i]][,j] = LaplacesDemon::rdirichlet(1, mat.prefs[[i]][,j]*100)
+    }
+    mat.prefs[[i]][is.nan(mat.prefs[[i]])] = 0 #removes NaNs from basal node "preferences"
+    ################################################################################
+    
+    diag(mat.prefs[[i]]) = diag(mat.prefs[[i]])*0
+    
+    fluxes[[i]] <- fluxing(mat.prefs[[i]],
+                               att[[i]]$Biomass.mg, 
+                               att[[i]]$Pop.met.rate.J_h,
+                               att[[i]]$efficiency,
+                               bioms.prefs = F,
+                               bioms.losses = F,
+                               ef.level = "prey")
+    
+    animals = which(!(att[[i]]$taxon %in% c("roots","detritus","bacteria","fungi")))
+     plants = which(att[[i]]$taxon == "roots")
+   detritus = which(att[[i]]$taxon == "detritus")
+    microbs = which(att[[i]]$taxon %in% c("bacteria","fungi"))
+    
+    herbivores = which(colSums(fluxes[[i]][c(animals,
+                                             detritus,
+                                             microbs),,drop = FALSE]) == 0 &
+                         colSums(fluxes[[i]][plants,,drop = FALSE])>0)
+    
+    predators = which(colSums(fluxes[[i]][c(plants,
+                                            detritus,
+                                            microbs),,drop = FALSE]) == 0 &
+                        colSums(fluxes[[i]][animals,]) > 0)
+    
+    allmetrics[i,]$Plot = unique(att[[i]]$Plot)
+    allmetrics[i,]$Treatment = unique(att[[i]]$Treatment)
+    allmetrics[i,]$tot.flux = sum(fluxes[[i]])                         # total energy flux              
+    allmetrics[i,]$pred.flux = sum(fluxes[[i]][animals, ])             # predation flux
+    allmetrics[i,]$herb.flux = sum(fluxes[[i]][plants, ])              # herbivory flux
+    allmetrics[i,]$detr.flux = sum(fluxes[[i]][detritus, ])            # detritivory flux
+    allmetrics[i,]$secon.decomp.flux = sum(fluxes[[i]][microbs, ])             # secondary decomposers flux
+    
+    allmetrics[i,]$top.down = sum(fluxes[[i]][herbivores, predators]) # from herbivores per unit herbivore biomass
+    allmetrics[i,]$bot.up = sum(fluxes[[i]][plants, herbivores])     # to herbivores per unit herbivore biomass
+    # allmetrics[i,]$herb.press = sum(fluxes[[i]][plants, herbivores])/  # to herbivores per unit plant biomass 
+    #   sum(unique(je.att[[i]]$plant.biomass))     
+    
+  }
+  
+  thousand[[k]] = allmetrics
+  
+  ############################## Show loop progress ##############################
+  cat(paste0(round((k/1000) * 100), '% completed'))
+  Sys.sleep(.05)
+  if (k == 1000) cat(': Done')
+  else cat('\014')
+  ################################################################################ 
+}  
+    
+    
+    
+
+
 
 
