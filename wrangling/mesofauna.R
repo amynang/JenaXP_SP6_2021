@@ -1,4 +1,3 @@
-library(readxl)
 library(openxlsx)
 library(tidyverse)
 library(googlesheets4)
@@ -55,9 +54,9 @@ mean.masses = other.masses %>%
 
 ################################### Collembola #################################
 
-raw = read_xlsx("H:/JenaSP6_2021/Coll family.xlsx",
-                sheet = "Tabelle1",
-                na = "")
+raw = read.xlsx("H:/JenaSP6_2021/Coll family.xlsx", 
+                na.strings = "NA",
+                check.names = T)
 
 df_new = raw %>% 
   # drop bodylength columns and comment column
@@ -86,7 +85,7 @@ coll.traits = data.frame(Family = names(df_new)[4:14],
 coll.traits = coll.traits %>% mutate(Order = case_when(Family %in% c("Dicyrtomidae",
                                                                      "Katiannidae",
                                                                      "Sminthuridae",
-                                                                     "Synphypleona juv.") ~ "Symphypleona",
+                                                                     "Synphypleona.juv.") ~ "Symphypleona",
                                                        Family %in% c("Hypogastruridae",
                                                                      "Neanuridae",
                                                                      "Onychiuridae",
@@ -98,7 +97,7 @@ coll.traits = coll.traits %>% mutate(Order = case_when(Family %in% c("Dicyrtomid
                                      form = case_when(Family %in% c("Dicyrtomidae",
                                                                     "Katiannidae",
                                                                     "Sminthuridae",
-                                                                    "Synphypleona juv.",
+                                                                    "Synphypleona.juv.",
                                                                     "Entomobryidae",
                                                                     "Hypogastruridae",
                                                                     "Neanuridae") ~ "Epigeic",
@@ -245,7 +244,7 @@ meso = # mesofauna as counted during sorting to groups
   select(-Comments) %>% 
   # *.in is the number we counted, .out is the number that were identified
   rename(Collembola.in = Collembola,
-         Collembola.out = `Collembola total`,
+         Collembola.out = `Collembola.total`,
          Acari.in = Acari,
          Prostigmata = `Prostigmata.+.Astigmata`) %>% 
   rowwise() %>% 
@@ -258,7 +257,6 @@ meso = # mesofauna as counted during sorting to groups
   select(-c(Acari.in,Acari.out,Collembola.in,Collembola.out,)) %>% 
   # this will scale proportions of the tree groups to the number of mites counted
   # (only relevant for cases where we counted more than were identified
-  rowwise() %>%
   mutate(  denominator = sum(Oribatida,Mesostigmata,Prostigmata),
             Oribatida = Acari*(Oribatida    / denominator),
          Mesostigmata = Acari*(Mesostigmata / denominator),
@@ -273,13 +271,12 @@ meso = # mesofauna as counted during sorting to groups
               Epigeic.Symphypleona = sum(Dicyrtomidae,
                                          Katiannidae,
                                          Sminthuridae,
-                                         `Synphypleona juv.`),
+                                         `Synphypleona.juv.`),
           Epigeic.Entomobryomorpha = Entomobryidae,
               Epigeic.Poduromorpha = sum(Hypogastruridae, 
                                          Neanuridae)) %>% 
   # same as for mites but for Collembola
   # (only relevant for cases where we counted more than were identified
-  rowwise() %>%
   mutate(denominator = sum(Edaphic.Entomobryomorpha, 
                            Edaphic.Neelipleona, 
                            Edaphic.Poduromorpha, 
@@ -293,6 +290,7 @@ meso = # mesofauna as counted during sorting to groups
          Epigeic.Entomobryomorpha = Collembola*(Epigeic.Entomobryomorpha / denominator),
          Epigeic.Poduromorpha     = Collembola*(Epigeic.Poduromorpha     / denominator)) %>% 
   select(-c(Collembola, denominator)) %>% 
+  ungroup() %>%  
   # (in.core divided by surface sampled to get density per cm^2, 
   #  then multiplying by 1e4 to get density per m^2)
   mutate(across(where(is.numeric), ~ (./(pi*(2.5)^2))*1e4),
