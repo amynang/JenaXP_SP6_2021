@@ -1,15 +1,15 @@
-library(readxl)
+library(openxlsx)
 library(tidyverse)
 library(stringr)
 library(googlesheets4)
 
 ############################## Community Composition ###########################
 
-raw = read_xlsx("H:/JenaSP6_2021/id034_nematodes_240-samples_JenaExperiment_DeltaBEF_July2021_Marcel-Ciobanu__240 samples Jena exp SP6 Nematodes Amyntas2021FINAL.xlsx",
+raw = read.xlsx("H:/JenaSP6_2021/id034_nematodes_240-samples_JenaExperiment_DeltaBEF_July2021_Marcel-Ciobanu__240 samples Jena exp SP6 Nematodes Amyntas2021FINAL.xlsx",
                 sheet = "Synthesis",
-                range = "A5:BM245",
-                #range = "BP5:EB245"
-                )
+                rows = 5:245,
+                cols = 1:65)
+
 raw[is.na(raw)] = 0
 # arrange by sample
 data = raw %>% arrange(Sample) 
@@ -169,7 +169,7 @@ taxa = names(raw)[-1]
 # Change to synonym accepted by Nemaplex
 taxa[taxa == "Macroposthonia"] = "Criconemoides"
 # why are these together?
-taxa[taxa == "Rhabditidae-dauer larvae"] = "Rhabditidae"
+taxa[taxa == "Rhabditidae-dauer.larvae"] = "Rhabditidae"
 # query_nemaplex can be found here:
 # https://github.com/amynang/marcel/blob/main/R/functions.R
 # source("https://raw.githubusercontent.com/amynang/marcel/main/R/functions.R")
@@ -253,7 +253,7 @@ micro = data.7 %>%
          Plot = str_split(.$Sample, "D", simplify = T)[,1],
          Treatment = paste0("Treatment", treatment)) %>% 
   select(-c(Sample, block, plot)) %>% 
-  rename(Rhabditidae = `Rhabditidae-dauer larvae`,
+  rename(Rhabditidae = `Rhabditidae-dauer.larvae`,
          Criconemoides.y = Macroposthonia,
          Criconemoides.x = Criconemoides) %>% 
   #select(-Rhabditidae) %>% # I guess, dauer larve as dormant are not included in the foodweb
@@ -264,6 +264,7 @@ micro = data.7 %>%
            Herbivore.nematodes = sum(pick(any_of(Herbivore.nematodes))),
             Omnivore.nematodes = sum(pick(any_of(Omnivore.nematodes))),
             Predator.nematodes = sum(pick(any_of(Predator.nematodes)))) %>% 
+  ungroup() %>%  
   mutate(# then I round up to get whole individuals 
          # (necessary for sampling bodymass distributions)
          across(where(is.numeric), ceiling))
