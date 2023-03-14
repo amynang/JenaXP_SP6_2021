@@ -62,6 +62,7 @@ macro = bind_rows(raw.1, raw.2, raw.3, raw.4) %>%
          # emerged from the soil between sampling and extraction
          # (rather than coming through the window)
          Diptera.larvae = sum(Diptera, Diptera.Larven)) %>% 
+  ungroup() %>%  
   select(-c(Plotcode, Pseudoscorpiones, Opiliones)) %>% 
   # (in.core divided by surface sampled to get density per cm^2, 
   #  then multiplying by 1e4 to get density per m^2)
