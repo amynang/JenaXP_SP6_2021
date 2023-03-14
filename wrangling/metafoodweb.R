@@ -5,15 +5,10 @@ source("wrangling/functions.R")
 potapov = read.xlsx("H:\\Literature\\brv12857-sup-0003-tables2.xlsx",
                     sheet = "GroupList") 
 
-micro.meso.macro = full_join(micro, meso, by = join_by(Plot,Treatment)) %>% 
-                   full_join(., macro, by = join_by(Plot,Treatment))
-  
+micro.meso.macro = read.csv("soil_fauna_abun_msq.csv")
 
+mean.masses = read.csv("mean_sd_masses.csv")
 
-mean.masses = mean.micro.masses %>% 
-  full_join(mean.meso.masses %>% select(-N)) %>% 
-  full_join(., mean.macro.masses %>% select(-N)) %>% 
-  mutate(taxon = str_replace(.$taxon," ", "."))
 
 # traits that modify feeding interactions
 feeding.traits = mean.masses %>% 
@@ -37,12 +32,9 @@ ver = feeding.traits %>%
 vertical = 1- ver
 
 
-
-
-
-nematodes = names(micro)[-(1:2)]
-meso      =  names(meso)[-(1:2)]  
-macro     = names(macro)[-(1:2)]
+nematodes = names(micro.meso.macro)[3:7]
+meso      =  names(micro.meso.macro)[8:19]  
+macro     = names(micro.meso.macro)[20:28]
 
 
 ########################## Trophic interaction matrix ##########################
@@ -94,11 +86,7 @@ mat[c("roots","detritus","fungi", nematodes, meso, macro) ,"Diptera.larvae"] = c
                                                                                  rep(.18/length(meso), length(meso)),
                                                                                  rep(.18/length(macro), length(macro)))
 mat[c(meso, macro), "Chilopoda"] = 1
-mat[c("Epigeic.Symphypleona",    
-      "Epigeic.Entomobryomorpha",
-      "Epigeic.Poduromorpha",
-      "Protura","Pauropoda","Symphyla",
-      macro[!(macro %in% c("Chilopoda"))])    , "Araneae"] = 1
+mat[c(meso, macro[!(macro %in% c("Chilopoda"))]), "Araneae"] = 1
 mat[c("roots","detritus","fungi", 
       meso, 
       macro[!(macro %in% c("Araneae","Chilopoda"))])    , "Coleoptera"] = 1
@@ -175,6 +163,14 @@ colSums(mat)
 
 
 ######################### plot specific attributes #############################
+imputed = micro.meso.macro %>% 
+  pivot_longer(3:28,
+               names_to = "taxon",
+               values_to = "abundance") %>% 
+  group_by(taxon) %>% 
+  summarise(mean.abund = median(abundance, na.rm = T),
+            sd.abund = sd(abundance, na.rm = T))
+
 att = micro.meso.macro %>% 
   mutate(.before = everything(),
   ID = paste0(Plot,Treatment)) %>% 
@@ -183,8 +179,11 @@ att = micro.meso.macro %>%
                values_to = "abundance") %>% 
   mutate(MeanMass.mg = mean.masses$MeanMass.mg[match(.$taxon, mean.masses$taxon)],
           StDMass.mg = mean.masses$StDMass.mg[match(.$taxon, mean.masses$taxon)]) %>%
-  filter(abundance>0) %>% 
+  filter(abundance>0 | is.na(abundance)) %>% 
   split(., with(.,ID))
+
+# for now, only foodwebs without missing taxa
+att = purrr::discard(att, ~any(is.na(.x)))
 
 
 ########################## parallelised  #######################################
@@ -206,7 +205,7 @@ foreach::getDoParWorkers()
 # this will take a while...
 # re-check everything!!!!!!!!!!!
 set.seed(404)
-att = foreach(i = 1:240, 
+att = foreach(i = 1:length(att), 
         #.combine = "c",
         .packages = c("tidyverse")) %dopar% {
   att[[i]] = att[[i]] %>%   
@@ -341,7 +340,8 @@ for (k in 1:1000) {
     mat.prefs[[i]][is.nan(mat.prefs[[i]])] = 0 #removes NaNs from basal node "preferences"
     ################################################################################
     
-    diag(mat.prefs[[i]]) = diag(mat.prefs[[i]])*0
+    # down-weighing cannibalism
+    diag(mat.prefs[[i]]) = diag(mat.prefs[[i]])*0.01
     
     fluxes[[i]] <- fluxing(mat.prefs[[i]],
                                att[[i]]$Biomass.mg, 
@@ -384,16 +384,108 @@ for (k in 1:1000) {
   thousand[[k]] = allmetrics
   
   ############################## Show loop progress ##############################
+  cat('\014')
   cat(paste0(round((k/1000) * 100), '% completed'))
   Sys.sleep(.05)
   if (k == 1000) cat(': Done')
-  else cat('\014')
   ################################################################################ 
 }  
     
     
     
+thou = do.call(rbind, thousand) %>% 
+  mutate(.after = Plot,
+         Plant.Richness = main.plot$sowndiv[match(.$Plot, main.plot$plotcode)])
+
+total = thou %>% 
+  group_by(Plot, Plant.Richness, Treatment) %>% 
+  summarise(tot.flux.m = mean(tot.flux),
+            tot.flux.sd = sd(tot.flux)) %>% 
+  ungroup() %>% 
+  mutate(.before = Plot,
+         Block = str_split(.$Plot, "A", simplify = T)[,1]) %>% 
+  mutate(Plant.Richness = (log2(Plant.Richness) - mean(log2(Plant.Richness)))/sd(log2(Plant.Richness)))
+
+total$Treatment = factor(total$Treatment, levels = c("Treatment3","Treatment2","Treatment1"))
+
+library(brms)
+m = brm(bf(tot.flux.m | mi(tot.flux.sd) ~ 1 
+           + Plant.Richness 
+           + Treatment 
+           + Plant.Richness:Treatment
+           + (1 + Treatment|Plot)
+           ),
+        #family = Gamma(link = "log"),
+        chains = 3,
+        iter = 2000,
+        cores = 3,
+        control = list(adapt_delta = 0.95),
+        backend = "cmdstanr", 
+        data = total)
+
+summary(m)
+pp_check(m, 
+         ndraws = 100)
+#plot(m)
+plot(conditional_effects(m), ask = FALSE)
+
+library(tidybayes)
+library(modelr)
+
+total %>%
+  group_by(Block, 
+           Plot, 
+           Treatment) %>%
+  data_grid(#ID = levels(properties$ID),
+    Plant.Richness = seq_range(Plant.Richness, n = 101)) %>%
+  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
+  # ONLY do this IF you are planning to make spaghetti plots, etc.
+  # NEVER subsample to a small sample to plot intervals, densities, etc.
+  add_epred_draws(m, ndraws = 500, re_formula = NA) %>%
+  ggplot(aes(x = Plant.Richness, y = tot.flux.m, color = Treatment)) +
+  geom_line(aes(y = (.epred), group = paste(Block, 
+                                                 Treatment, 
+                                                 .draw)), alpha = .25) +
+  #geom_point(data = dd[complete.cases(dd),],
+  #           position = position_jitter(width = .1)) +
+  #stat_lineribbon(aes(y = log10(.epred)), .width = .95, alpha = .5) +
+  #scale_fill_manual(values = "grey") +
+  scale_color_manual(values = c("#F3BE61",
+                                "#AA422E",
+                                "#6C6F80")) +
+                                           #scale_fill_manual(values = c("#F3BE61","#AA422E","#6C6F80")) +
+  theme_classic()
 
 
 
 
+
+ggplot(thou[thou$Plot =="B1A15" & thou$Treatment %in% c("Treatment1",
+                                                        "Treatment2",
+                                                        "Treatment3"), ], 
+       aes(tot.flux, color = Treatment)) + 
+  geom_line(stat="density") + 
+  theme_classic() +
+  theme(legend.position = "none")
+
+library(ggridges)
+library(viridis)
+library(hrbrthemes)
+
+ggplot(thou, aes(x = log(pred.flux), 
+                 y = Plot, 
+                 fill = ..x..)) +
+  geom_density_ridges_gradient(scale = 3, 
+                               rel_min_height = 0.01) +
+  scale_fill_viridis(name = "Temp. [F]", 
+                     option = "C") +
+  #labs(title = 'Temperatures in Lincoln NE in 2016') +
+  #theme_ipsum() +
+  #facet_grid(Plant.Richness~.) +
+  facet_grid(vars(Plant.Richness),
+             vars(Treatment)) +
+  theme(
+    legend.position="none",
+    panel.spacing = unit(0.1, "lines"),
+    strip.text.x = element_text(size = 8)
+  )  
