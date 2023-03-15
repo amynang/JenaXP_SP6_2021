@@ -19,20 +19,20 @@ for (k in 1:length(ind)) {
                length=length(att))
   
   for (i in 1:length(att)) {
-    web[[i]] = mat[tta[[i]][[ind[k]]]$taxon,
-                   tta[[i]][[ind[k]]]$taxon]
+    web[[i]] = mat[att[[i]][[ind[k]]]$taxon,
+                   att[[i]][[ind[k]]]$taxon]
   }
   
   for (i in 1:length(att)) {
     ####################   Omnivores' Balanced Diet Plan   #########################
     # add biomass values in the matrix to 'manually' define the preferences
     # first create a matrix with species biomasses
-    mat.bioms = replicate(length(tta[[i]][[ind[k]]]$Biomass.mg), tta[[i]][[ind[k]]]$Biomass.mg)
+    mat.bioms = replicate(length(att[[i]][[ind[k]]]$Biomass.mg), att[[i]][[ind[k]]]$Biomass.mg)
     # mat.prefs contains preference of predators based on their prey biomasses
     mat.prefs[[i]] = web[[i]] * mat.bioms
     
-    basals = which(tta[[i]][[ind[k]]]$taxon %in% c("roots","detritus","bacteria","fungi"))
-    animals = which(!(tta[[i]][[ind[k]]]$taxon %in% c("roots","detritus","bacteria","fungi")))
+    basals = which(att[[i]][[ind[k]]]$taxon %in% c("roots","detritus","bacteria","fungi"))
+    animals = which(!(att[[i]][[ind[k]]]$taxon %in% c("roots","detritus","bacteria","fungi")))
     #omnivores that feed on basals and animals
     omnivores = which(colSums(mat.prefs[[i]][basals,])>0 &
                         colSums(mat.prefs[[i]][animals,])>0)
@@ -88,17 +88,17 @@ for (k in 1:length(ind)) {
     diag(mat.prefs[[i]]) = diag(mat.prefs[[i]])*0.01
     
     fluxes[[i]] <- fluxing(mat.prefs[[i]],
-                           tta[[i]][[ind[k]]]$Biomass.mg, 
-                           tta[[i]][[ind[k]]]$Pop.met.rate.J_h,
-                           tta[[i]][[ind[k]]]$efficiency,
+                           att[[i]][[ind[k]]]$Biomass.mg, 
+                           att[[i]][[ind[k]]]$Pop.met.rate.J_h,
+                           att[[i]][[ind[k]]]$efficiency,
                            bioms.prefs = F,
                            bioms.losses = F,
                            ef.level = "prey")
     
-    animals = which(!(tta[[i]][[ind[k]]]$taxon %in% c("roots","detritus","bacteria","fungi")))
-    plants = which(tta[[i]][[ind[k]]]$taxon == "roots")
-    detritus = which(tta[[i]][[ind[k]]]$taxon == "detritus")
-    microbs = which(tta[[i]][[ind[k]]]$taxon %in% c("bacteria","fungi"))
+    animals = which(!(att[[i]][[ind[k]]]$taxon %in% c("roots","detritus","bacteria","fungi")))
+    plants = which(att[[i]][[ind[k]]]$taxon == "roots")
+    detritus = which(att[[i]][[ind[k]]]$taxon == "detritus")
+    microbs = which(att[[i]][[ind[k]]]$taxon %in% c("bacteria","fungi"))
     
     herbivores = which(colSums(fluxes[[i]][c(animals,
                                              detritus,
@@ -110,8 +110,8 @@ for (k in 1:length(ind)) {
                                             microbs),,drop = FALSE]) == 0 &
                         colSums(fluxes[[i]][animals,]) > 0)
     
-    allmetrics[i,]$Plot = unique(tta[[i]][[ind[k]]]$Plot)
-    allmetrics[i,]$Treatment = unique(tta[[i]][[ind[k]]]$Treatment)
+    allmetrics[i,]$Plot = unique(att[[i]][[ind[k]]]$Plot)
+    allmetrics[i,]$Treatment = unique(att[[i]][[ind[k]]]$Treatment)
     allmetrics[i,]$tot.flux = sum(fluxes[[i]])                         # total energy flux              
     allmetrics[i,]$pred.flux = sum(fluxes[[i]][animals, ])             # predation flux
     allmetrics[i,]$herb.flux = sum(fluxes[[i]][plants, ])              # herbivory flux
