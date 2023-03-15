@@ -1,9 +1,9 @@
 library(tidyverse)
 library(fluxweb)
 
-att = readRDS("attributes_imputed.RData")
+att = readRDS("fluxes/attributes_imputed.RData")
 
-mat = as.matrix(read.csv("metafoodweb.csv", row.names = 1))
+mat = as.matrix(read.csv("fluxes/metafoodweb.csv", row.names = 1))
 
 thousand = vector(mode = "list",length=1000)
 set.seed(404)
