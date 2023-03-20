@@ -63,8 +63,8 @@ for (k in 1:length(ind)) {
                           herb.flux = numeric(length(att)),  # herbivory flux
                           detr.flux = numeric(length(att)),
                           secon.decomp.flux = numeric(length(att)),
-                          top.down = numeric(length(att)),   # from herbivores per unit herbivore biomass
-                          bot.up = numeric(length(att)),     # to herbivores per unit herbivore biomass
+                          down = numeric(length(att)),   # from herbivores per unit herbivore biomass
+                          up = numeric(length(att)),     # to herbivores per unit herbivore biomass
                           herb.press = numeric(length(att))) # to herbivores per unit plant biomass
   
   
@@ -105,6 +105,15 @@ for (k in 1:length(ind)) {
                                              microbs),,drop = FALSE]) == 0 &
                          colSums(fluxes[[i]][plants,,drop = FALSE])>0)
     
+    plant.consumers = which(colSums(fluxes[[i]][plants,,drop = FALSE])>0)
+    
+    # the proportion of energy uptake in plant consumers that comes from plants
+    # influx of energy from plants / total influx of energy
+    # (1 for herbivores, a fraction for omnivores)
+    prop = (fluxes[[i]][plants,
+                        plant.consumers]*0.5446309)/
+            colSums(fluxes[[i]][,plant.consumers]*att[[i]][[ind[k]]]$efficiency)
+    
     predators = which(colSums(fluxes[[i]][c(plants,
                                             detritus,
                                             microbs),,drop = FALSE]) == 0 &
@@ -116,10 +125,10 @@ for (k in 1:length(ind)) {
     allmetrics[i,]$pred.flux = sum(fluxes[[i]][animals, ])             # predation flux
     allmetrics[i,]$herb.flux = sum(fluxes[[i]][plants, ])              # herbivory flux
     allmetrics[i,]$detr.flux = sum(fluxes[[i]][detritus, ])            # detritivory flux
-    allmetrics[i,]$secon.decomp.flux = sum(fluxes[[i]][microbs, ])             # secondary decomposers flux
+    allmetrics[i,]$secon.decomp.flux = sum(fluxes[[i]][microbs, ])     # secondary decomposers flux
     
-    allmetrics[i,]$top.down = sum(fluxes[[i]][herbivores, predators]) # from herbivores per unit herbivore biomass
-    allmetrics[i,]$bot.up = sum(fluxes[[i]][plants, herbivores])     # to herbivores per unit herbivore biomass
+    allmetrics[i,]$down = sum(fluxes[[i]][plant.consumers, ]*prop)    # outflux from plant consumers***
+    allmetrics[i,]$up = sum(fluxes[[i]][plants, ])*0.5446309          # influx from plants to plant consumers
     # allmetrics[i,]$herb.press = sum(fluxes[[i]][plants, herbivores])/  # to herbivores per unit plant biomass 
     #   sum(unique(je.att[[i]]$plant.biomass))     
     
@@ -138,5 +147,5 @@ for (k in 1:length(ind)) {
 
 thousand = do.call(rbind, thousand)
 
-write.csv(thousand, "fluxes1000_imputed.csv",
+write.csv(thousand, "fluxes1000_imputed_dir100.csv",
           row.names = F)
