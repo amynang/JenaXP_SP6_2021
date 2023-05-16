@@ -55,9 +55,9 @@ mat[nematodes,    "Predator.nematodes"] = 1 # what about the loop?
 
 mat[c("detritus","fungi"),    "Protura"] = c(.1,.9)
 mat[c("roots","detritus","fungi"),    "Pauropoda"] = 1
-mat[c("roots","detritus",nematodes,meso),    "Symphyla"] = c(.25,.25,rep(.25/length(nematodes),
+mat[c("roots","detritus",nematodes,meso),    "Symphyla"] = c(1/3,1/3,rep(1/(3*length(c(nematodes,meso))),
                                                                          length(nematodes)),
-                                                                     rep(.25/length(meso),
+                                                                     rep(1/(3*length(c(nematodes,meso))),
                                                                      length(meso)))
 
 mat[c("roots","bacteria","fungi")             ,    "Edaphic.Entomobryomorpha"] = 1
@@ -71,9 +71,9 @@ mat[c("bacteria","fungi",nematodes)           ,    "Epigeic.Poduromorpha"    ] =
 mat[c("detritus","bacteria","fungi", nematodes),          "Oribatida"] = c(.25,.25,.25,rep(.25/length(nematodes),
                                                                                            length(nematodes)))
 
-mat[c("roots","detritus","fungi", nematodes, meso), "Prostigmata"] = c(.2,.2,.2,rep(.2/length(nematodes),
+mat[c("roots","detritus","fungi", nematodes, meso), "Prostigmata"] = c(.25,.25,.25,rep(.25/length(c(nematodes,meso)),
                                                                                      length(nematodes)),
-                                                                                 rep(.2/length(meso),
+                                                                                 rep(.25/length(c(nematodes,meso)),
                                                                                      length(meso)))
 mat[c(nematodes, meso), "Mesostigmata"] = 1
   
@@ -82,16 +82,21 @@ mat["roots",    "Hemiptera"] = 1
 mat[c("roots","detritus","bacteria","fungi") ,    "Gastropoda"] = c(.1,.3,.3,.3)
 mat[c("detritus","bacteria","fungi")         ,       "Isopoda"] = 1
 mat[c("detritus","fungi","bacteria")         ,     "Diplopoda"] = c(.75,.25/2,.25/2)
-mat[c("roots","detritus","fungi", nematodes, meso, macro) ,"Diptera.larvae"] = c(.1,.18,.18,
-                                                                                 rep(.18/length(nematodes), length(nematodes)),
-                                                                                 rep(.18/length(meso), length(meso)),
-                                                                                 rep(.18/length(macro), length(macro)))
+mat[c("roots","detritus","fungi", nematodes, meso, macro) ,"Diptera.larvae"] = c(.1,.3,.3,
+                                                                                 rep(.3/length(c(nematodes,meso,macro)), length(nematodes)),
+                                                                                 rep(.3/length(c(nematodes,meso,macro)), length(meso)),
+                                                                                 rep(.3/length(c(nematodes,meso,macro)), length(macro)))
 mat[c(meso, macro), "Chilopoda"] = 1
 mat[c(meso, macro[!(macro %in% c("Chilopoda"))]), "Araneae"] = 1
 mat[c("roots","detritus","fungi", 
       meso, 
       macro[!(macro %in% c("Araneae","Chilopoda"))])    , "Coleoptera"] = 1
 
+#mat[c(#"roots","detritus","fungi", 
+#      meso, 
+#      macro[!(macro %in% c("Araneae","Chilopoda"))])    , "Coleoptera"] = 1 #c(.1/3,.1/3,.1/3,
+#                                                                            #  rep(.45/length(meso), length(meso)),
+#                                                                            #  rep(.45/(length(macro)-2), length(macro)-2))
 
 mat[is.na(mat)] = 0
 mat = vegan::decostand(mat,"total", 2)
@@ -159,5 +164,5 @@ mat[c(nematodes,meso,macro),
   
 colSums(mat)
 
-write.csv(mat, "metafoodweb.csv")
+write.csv(mat, "fluxes/metafoodweb.csv")
 
