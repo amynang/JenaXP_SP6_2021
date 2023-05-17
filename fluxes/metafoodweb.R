@@ -90,7 +90,9 @@ mat[c(meso, macro), "Chilopoda"] = 1
 mat[c(meso, macro[!(macro %in% c("Chilopoda"))]), "Araneae"] = 1
 mat[c("roots","detritus","fungi", 
       meso, 
-      macro[!(macro %in% c("Araneae","Chilopoda"))])    , "Coleoptera"] = 1
+      macro[!(macro %in% c("Araneae","Chilopoda"))])    , "Coleoptera"] = c(.25,.25,.25,
+                                                                            rep(.25/length(c(meso,macro[!(macro %in% c("Araneae","Chilopoda"))])), length(meso)),
+                                                                            rep(.25/length(c(meso,macro[!(macro %in% c("Araneae","Chilopoda"))])), length(macro[!(macro %in% c("Araneae","Chilopoda"))])))
 
 #mat[c(#"roots","detritus","fungi", 
 #      meso, 
