@@ -293,10 +293,7 @@ meso = # mesofauna as counted during sorting to groups
   ungroup() %>%  
   # (in.core divided by surface sampled to get density per cm^2, 
   #  then multiplying by 1e4 to get density per m^2)
-  mutate(across(where(is.numeric), ~ (./(pi*(2.5)^2))*1e4),
-         # then I round up to get whole individuals 
-         # (necessary for sampling bodymass distributions)
-         across(where(is.numeric), ceiling))
+  mutate(across(where(is.numeric), ~ (./(pi*(2.5)^2))*1e4))
 
 meso.masses = other.masses %>% 
               full_join(collembola.masses) %>% 
