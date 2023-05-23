@@ -210,9 +210,9 @@ acari.masses = acari.lengths %>%
                values_to = "length.micro") %>%  # Is it really mm???????
   mutate(FreshMass.mg = case_when(# based on Mercer 2001 10.1017/S0954102001000219
     # (dividing by 1e3 because Mercer works with micrograms for these taxa)
-    taxon ==    "Oribatida" ~ (10^(2.146 + (2.770 * log(length.micro/1e3)))) / 1e3,
-    taxon ==  "Prostigmata" ~ (10^(2.124 + (2.808 * log(length.micro/1e3)))) / 1e3,
-    taxon == "Mesostigmata" ~ (10^(2.064 + (2.857 * log(length.micro/1e3)))) / 1e3)) %>% 
+    taxon ==    "Oribatida" ~ (10^(2.146 + (2.770 * log10(length.micro/1e3)))) / 1e3,
+    taxon ==  "Prostigmata" ~ (10^(2.124 + (2.808 * log10(length.micro/1e3)))) / 1e3,
+    taxon == "Mesostigmata" ~ (10^(2.064 + (2.857 * log10(length.micro/1e3)))) / 1e3)) %>% 
   drop_na()
 
 #plot(acari.masses$length.micro/1e3, acari.masses$FreshMass.mg)
