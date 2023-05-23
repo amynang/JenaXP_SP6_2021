@@ -147,5 +147,5 @@ for (k in 1:length(ind)) {
 
 thousand = do.call(rbind, thousand)
 
-write.csv(thousand, "fluxes1000_imputed_dir100.csv",
+write.csv(thousand, "fluxes/fluxes1000_imputed_dir100.csv",
           row.names = F)
