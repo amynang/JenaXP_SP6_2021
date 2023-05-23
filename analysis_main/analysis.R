@@ -21,19 +21,19 @@ total$Treatment = factor(total$Treatment, levels = c("Treatment3","Treatment2","
 
 
 m.tot = brm(bf(tot.flux.m|mi(tot.flux.sd) ~ 1  
-           + Plant.Richness.sc 
-           + Treatment 
-           + Plant.Richness.sc:Treatment
-           + (1 + Treatment|Plot))
-           ,family = gaussian(), #link = "log"
-           chains = 4,
-           iter = 4000,
-           cores = 4,
-           control = list(adapt_delta = 0.95),
-           backend = "cmdstanr",
-           seed = 404,
-           data = total,
-           file = "analysis_main/m.tot")
+               + Plant.Richness.sc 
+               + Treatment 
+               + Plant.Richness.sc:Treatment
+               + (1 + Treatment|Block/Plot))
+            ,family = gaussian(), #link = "log"
+            chains = 4,
+            iter = 4000,
+            cores = 4,
+            control = list(adapt_delta = 0.99),
+            backend = "cmdstanr",
+            seed = 404,
+            data = total,
+            file = "analysis_main/m.tot")
 
 summary(m.tot, prob = 0.9)
 
@@ -72,7 +72,7 @@ total %>%
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -111,19 +111,19 @@ pred$Treatment = factor(pred$Treatment, levels = c("Treatment3","Treatment2","Tr
 
 
 m.pred = brm(bf(pred.flux.m|mi(pred.flux.sd) ~ 1  
-               + Plant.Richness.sc 
-               + Treatment 
-               + Plant.Richness.sc:Treatment
-               + (1 + Treatment|Plot))
-            ,family = gaussian(), #link = "log"
-            chains = 4,
-            iter = 4000,
-            cores = 4,
-            control = list(adapt_delta = 0.99),
-            backend = "cmdstanr",
-            seed = 404,
-            data = pred,
-            file = "analysis_main/m.pred")
+                + Plant.Richness.sc 
+                + Treatment 
+                + Plant.Richness.sc:Treatment
+                + (1 + Treatment|Block/Plot))
+             ,family = gaussian(), #link = "log"
+             chains = 4,
+             iter = 4000,
+             cores = 4,
+             control = list(adapt_delta = 0.99),
+             backend = "cmdstanr",
+             seed = 404,
+             data = pred,
+             file = "analysis_main/m.pred")
 
 summary(m.pred, prob = 0.9)
 
@@ -161,7 +161,7 @@ pred %>%
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -199,12 +199,12 @@ m.herb = brm(bf(herb.flux.m|mi(herb.flux.sd) ~ 1
                 + Plant.Richness.sc 
                 + Treatment 
                 + Plant.Richness.sc:Treatment
-                + (1 + Treatment|Plot))
+                + (1 + Treatment|Block/Plot))
              ,family = gaussian(), #link = "log"
              chains = 4,
              iter = 4000,
              cores = 4,
-             control = list(adapt_delta = 0.95),
+             control = list(adapt_delta = 0.99),
              backend = "cmdstanr",
              seed = 404,
              data = herb,
@@ -217,7 +217,7 @@ herb.emt = emtrends(m.herb, "Treatment", var = "Plant.Richness.sc")
 summary(herb.emt, point.est = mean, level = .9)
 herb.em = emmeans (m.herb, pairwise  ~ Treatment | Plant.Richness.sc)
 herb.em = emmeans (m.herb, pairwise  ~ Treatment | Plant.Richness.sc,
-                  at = list(Plant.Richness.sc = c(-1.3786776, 1.1333247, 2.3308531)))
+                   at = list(Plant.Richness.sc = c(-1.3786776, 1.1333247, 2.3308531)))
 summary(herb.em, point.est = mean, level = .9)
 # pairwise comparisons
 herb.pairs = pairs(herb.emt)
@@ -247,7 +247,7 @@ herb %>%
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -282,19 +282,19 @@ press = thou %>%
 press$Treatment = factor(press$Treatment, levels = c("Treatment3","Treatment2","Treatment1"))
 
 m.pres = brm(bf(herb.press.m|mi(herb.press.sd) ~ 1  
-           + Plant.Richness.sc 
-           + Treatment 
-           + Plant.Richness.sc:Treatment
-           + (1 + Treatment|Plot))
-        ,family = gaussian(), #link = "log"
-        chains = 4,
-        iter = 4000,
-        cores = 4,
-        control = list(adapt_delta = 0.95),
-        backend = "cmdstanr",
-        seed = 404,
-        data = press,
-        file = "analysis_main/m.pres")
+                + Plant.Richness.sc 
+                + Treatment 
+                + Plant.Richness.sc:Treatment
+                + (1 + Treatment|Block/Plot))
+             ,family = gaussian(), #link = "log"
+             chains = 4,
+             iter = 4000,
+             cores = 4,
+             control = list(adapt_delta = 0.99),
+             backend = "cmdstanr",
+             seed = 404,
+             data = press,
+             file = "analysis_main/m.pres")
 
 summary(m.pres, prob = 0.9)
 
@@ -332,7 +332,7 @@ press %>%
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -367,19 +367,19 @@ contr = thou %>%
 contr$Treatment = factor(contr$Treatment, levels = c("Treatment3","Treatment2","Treatment1"))
 
 m.cont = brm(bf(contr.m|mi(contr.sd) ~ 1  
-           + Plant.Richness.sc 
-           + Treatment 
-           + Plant.Richness.sc:Treatment
-           + (1 + Treatment|Plot))
-        ,family = Beta(), #link = "log"
-        chains = 4,
-        iter = 4000,
-        cores = 4,
-        control = list(adapt_delta = 0.95),
-        backend = "cmdstanr",
-        seed = 404,
-        data = contr,
-        file = "analysis_main/m.cont")
+                + Plant.Richness.sc 
+                + Treatment 
+                + Plant.Richness.sc:Treatment
+                + (1 + Treatment|Block/Plot))
+             ,family = Beta(), #link = "log"
+             chains = 4,
+             iter = 4000,
+             cores = 4,
+             control = list(adapt_delta = 0.99),
+             backend = "cmdstanr",
+             seed = 404,
+             data = contr,
+             file = "analysis_main/m.cont")
 
 summary(m.cont, prob = 0.9)
 
@@ -418,7 +418,7 @@ contr %>%
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -462,7 +462,7 @@ m.detr = brm(bf(detr.flux.m|mi(detr.flux.sd) ~ 1
                 + Plant.Richness.sc 
                 + Treatment 
                 + Plant.Richness.sc:Treatment
-                + (1 + Treatment|Plot))
+                + (1 + Treatment|Block/Plot))
              ,family = gaussian(), #link = "log"
              chains = 4,
              iter = 8000,
@@ -509,7 +509,7 @@ detr %>%
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -551,19 +551,19 @@ secon.decomp$Treatment = factor(secon.decomp$Treatment, levels = c("Treatment3",
 
 
 m.secon.decomp = brm(bf(secon.decomp.flux.m|mi(secon.decomp.flux.sd) ~ 1  
-                + Plant.Richness.sc 
-                + Treatment 
-                + Plant.Richness.sc:Treatment
-                + (1 + Treatment|Plot))
-             ,family = gaussian(), #link = "log"
-             chains = 4,
-             iter = 8000,
-             cores = 4,
-             control = list(adapt_delta = 0.99),
-             backend = "cmdstanr",
-             seed = 404,
-             data = secon.decomp,
-             file = "analysis_main/m.secon.decomp")
+                        + Plant.Richness.sc 
+                        + Treatment 
+                        + Plant.Richness.sc:Treatment
+                        + (1 + Treatment|Block/Plot))
+                     ,family = gaussian(), #link = "log"
+                     chains = 4,
+                     iter = 8000,
+                     cores = 4,
+                     control = list(adapt_delta = 0.99),
+                     backend = "cmdstanr",
+                     seed = 404,
+                     data = secon.decomp,
+                     file = "analysis_main/m.secon.decomp")
 
 summary(m.secon.decomp, prob = 0.9)
 
@@ -572,7 +572,7 @@ secon.decomp.emt = emtrends(m.secon.decomp, "Treatment", var = "Plant.Richness.s
 summary(secon.decomp.emt, point.est = mean, level = .9)
 secon.decomp.em = emmeans (m.secon.decomp, pairwise  ~ Treatment | Plant.Richness.sc)
 secon.decomp.em = emmeans (m.secon.decomp, pairwise  ~ Treatment | Plant.Richness.sc,
-                   at = list(Plant.Richness.sc = c(-1.3786776, 1.1333247, 2.3308531)))
+                           at = list(Plant.Richness.sc = c(-1.3786776, 1.1333247, 2.3308531)))
 summary(secon.decomp.em, point.est = mean, level = .9)
 # pairwise comparisons
 secon.decomp.pairs = pairs(secon.decomp.emt)
@@ -601,7 +601,7 @@ secon.decomp %>%
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -631,7 +631,7 @@ secon.decomp %>%
 
 library(patchwork)
 
- p1 = total %>% 
+p1 = total %>% 
   group_by(Plot, tot.flux.sd,
            #latitude, longitude,
            Treatment) %>%
@@ -644,13 +644,14 @@ library(patchwork)
   ggplot(aes(x = Plant.Richness.sc, 
              y = (tot.flux.m), 
              color = Treatment, 
-             fill = Treatment)) +
+             fill = Treatment,
+             linetype = Treatment)) +
   #geom_line(aes(y = (.epred), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = total, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -659,6 +660,8 @@ library(patchwork)
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
+  scale_linetype_manual(values = c("solid","solid","solid"),
+                        guide = "none") +
   labs(#title = "Energy flux in the soil invertebrate food-web",
     y = "Community level energy flux log10(J/h\u00b7m\u00b2)",
     x = "Plant richness") +
@@ -687,13 +690,14 @@ p2 = pred %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (pred.flux.m), 
              color = Treatment, 
-             fill = Treatment)) +
+             fill = Treatment,
+             linetype = Treatment)) +
   #geom_line(aes(y = (.epred), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = pred, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -702,6 +706,7 @@ p2 = pred %>%
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
+  scale_linetype_manual(values = c("solid","solid","solid")) +
   labs(#title = "Energy flux in the soil invertebrate food-web",
     y = "Predation log10(J/h\u00b7m\u00b2)",
     x = "Plant richness") +
@@ -729,13 +734,14 @@ p3 = herb %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (herb.flux.m), 
              color = Treatment, 
-             fill = Treatment)) +
+             fill = Treatment,
+             linetype = Treatment)) +
   #geom_line(aes(y = (.eherb), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = herb, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -744,6 +750,7 @@ p3 = herb %>%
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
+  scale_linetype_manual(values = c("solid","dashed","dashed")) +
   labs(#title = "Energy flux in the soil invertebrate food-web",
     y = "Herbivory log10(J/h\u00b7m\u00b2)",
     x = "Plant richness") +
@@ -777,7 +784,7 @@ p4 = detr %>%
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -819,7 +826,7 @@ p5 = secon.decomp %>%
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -842,7 +849,7 @@ p5 = secon.decomp %>%
         legend.position = "none")
 
 
-p1 + ((p3+p2)/(p4+p5))
+p1 + ((p3+p2)/(p4+p5)) + plot_annotation(tag_levels = 'a')
 
 
 
@@ -867,7 +874,7 @@ p6 = press %>%
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -877,7 +884,7 @@ p6 = press %>%
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
   labs(#title = "Energy flux in the soil invertebrate food-web",
-    y = "Herbivory pressure on Plants log10()",
+    y = "Herbivory pressure on Plants",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
                      name = "history treatment",
@@ -903,13 +910,14 @@ p7 = contr %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (contr.m), 
              color = Treatment, 
-             fill = Treatment)) +
+             fill = Treatment,
+             linetype = Treatment)) +
   #geom_line(aes(y = (.epred), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = contr, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
                   .width = .9,
-                  point_interval = "mean_hdi") +  
+                  point_interval = "mean_qi") +  
   scale_x_continuous(breaks = c(-1.3786776, -0.7506770, -0.1226765, 
                                 0.5053241, 1.1333247, 2.3308531),
                      labels = c('1', '2', '4', '8', '16', '60')) +
@@ -918,8 +926,9 @@ p7 = contr %>%
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
+  scale_linetype_manual(values = c("dashed","dashed","solid")) +
   labs(#title = "Energy flux in the soil invertebrate food-web",
-    y = "Control of herbivory (outfluxes/influxes)",
+    y = "Control of herbivory",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
                      name = "history treatment",
@@ -931,4 +940,5 @@ p7 = contr %>%
         axis.title.y = element_text(size = rel(1.2)),
         legend.position = "none")
 
-p6 + p7
+(p6 + p7) + plot_annotation(tag_levels = 'a') 
+
