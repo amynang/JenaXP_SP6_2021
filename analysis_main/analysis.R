@@ -25,7 +25,7 @@ m.tot = brm(bf(tot.flux.m|mi(tot.flux.sd) ~ 1
                + Treatment 
                + Plant.Richness.sc:Treatment
                + (1 + Treatment|Block/Plot))
-            ,family = gaussian(), #link = "log"
+            ,family = gaussian(), 
             chains = 4,
             iter = 4000,
             cores = 4,
@@ -40,10 +40,6 @@ summary(m.tot, prob = 0.9)
 # slopes for each treatment
 tot.emt = emtrends(m.tot, "Treatment", var = "Plant.Richness.sc")
 summary(tot.emt, point.est = mean, level = .9)
-tot.em = emmeans (m.tot, pairwise  ~ Treatment | Plant.Richness.sc)
-tot.em = emmeans (m.tot, pairwise  ~ Treatment | Plant.Richness.sc,
-                  at = list(Plant.Richness.sc = c(-1.3786776, 1.1333247, 2.3308531)))
-summary(tot.em, point.est = mean, level = .9)
 # pairwise comparisons
 tot.pairs = pairs(tot.emt)
 summary(tot.pairs, point.est = mean, level = .9)
@@ -55,19 +51,14 @@ pp_check(m.tot,
 
 total %>% 
   group_by(Plot, tot.flux.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.tot, #ndraws = 500, 
+  add_epred_draws(m.tot,
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (tot.flux.m), 
              color = Treatment, 
              fill = Treatment)) +
-  #geom_line(aes(y = (.epred), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = total, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -81,7 +72,7 @@ total %>%
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Community level energy flux log10(J/h\u00b7m\u00b2)",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
@@ -115,7 +106,7 @@ m.pred = brm(bf(pred.flux.m|mi(pred.flux.sd) ~ 1
                 + Treatment 
                 + Plant.Richness.sc:Treatment
                 + (1 + Treatment|Block/Plot))
-             ,family = gaussian(), #link = "log"
+             ,family = gaussian(), 
              chains = 4,
              iter = 4000,
              cores = 4,
@@ -130,10 +121,6 @@ summary(m.pred, prob = 0.9)
 # slopes for each treatment
 pred.emt = emtrends(m.pred, "Treatment", var = "Plant.Richness.sc")
 summary(pred.emt, point.est = mean, level = .9)
-pred.em = emmeans (m.pred, pairwise  ~ Treatment | Plant.Richness.sc)
-pred.em = emmeans (m.pred, pairwise  ~ Treatment | Plant.Richness.sc,
-                   at = list(Plant.Richness.sc = c(-1.3786776, 1.1333247, 2.3308531)))
-summary(pred.em, point.est = mean, level = .9)
 # pairwise comparisons
 pred.pairs = pairs(pred.emt)
 summary(pred.pairs, point.est = mean, level = .9)
@@ -144,19 +131,14 @@ pp_check(m.pred, ndraws = 100)
 
 pred %>%
   group_by(Plot, pred.flux.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.pred, #ndraws = 500, 
+  add_epred_draws(m.pred,
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (pred.flux.m), 
              color = Treatment, 
              fill = Treatment)) +
-  #geom_line(aes(y = (.epred), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = pred, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -170,7 +152,7 @@ pred %>%
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Predation log10(J/h\u00b7m\u00b2)",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
@@ -200,7 +182,7 @@ m.herb = brm(bf(herb.flux.m|mi(herb.flux.sd) ~ 1
                 + Treatment 
                 + Plant.Richness.sc:Treatment
                 + (1 + Treatment|Block/Plot))
-             ,family = gaussian(), #link = "log"
+             ,family = gaussian(), 
              chains = 4,
              iter = 4000,
              cores = 4,
@@ -215,10 +197,6 @@ summary(m.herb, prob = 0.9)
 # slopes for each treatment
 herb.emt = emtrends(m.herb, "Treatment", var = "Plant.Richness.sc")
 summary(herb.emt, point.est = mean, level = .9)
-herb.em = emmeans (m.herb, pairwise  ~ Treatment | Plant.Richness.sc)
-herb.em = emmeans (m.herb, pairwise  ~ Treatment | Plant.Richness.sc,
-                   at = list(Plant.Richness.sc = c(-1.3786776, 1.1333247, 2.3308531)))
-summary(herb.em, point.est = mean, level = .9)
 # pairwise comparisons
 herb.pairs = pairs(herb.emt)
 summary(herb.pairs, point.est = mean, level = .9)
@@ -230,19 +208,14 @@ pp_check(m.herb, ndraws = 100)
 
 herb %>%
   group_by(Plot, herb.flux.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_eherb_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.herb, #ndraws = 500, 
+  add_epred_draws(m.herb,
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (herb.flux.m), 
              color = Treatment, 
              fill = Treatment)) +
-  #geom_line(aes(y = (.eherb), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = herb, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -256,7 +229,7 @@ herb %>%
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Herbivory log10(J/h\u00b7m\u00b2)",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
@@ -286,7 +259,7 @@ m.pres = brm(bf(herb.press.m|mi(herb.press.sd) ~ 1
                 + Treatment 
                 + Plant.Richness.sc:Treatment
                 + (1 + Treatment|Block/Plot))
-             ,family = gaussian(), #link = "log"
+             ,family = gaussian(), 
              chains = 4,
              iter = 4000,
              cores = 4,
@@ -301,10 +274,6 @@ summary(m.pres, prob = 0.9)
 # slopes for each treatment
 pres.emt = emtrends(m.pres, "Treatment", var = "Plant.Richness.sc")
 summary(pres.emt, point.est = mean, level = .9)
-pres.em = emmeans (m.pres, pairwise  ~ Treatment | Plant.Richness.sc)
-pres.em = emmeans (m.pres, pairwise  ~ Treatment | Plant.Richness.sc,
-                   at = list(Plant.Richness.sc = c(-1.3786776, 1.1333247, 2.3308531)))
-summary(pres.em, point.est = mean, level = .9)
 # pairwise comparisons
 pres.pairs = pairs(pres.emt)
 summary(pres.pairs, point.est = mean, level = .9)
@@ -315,19 +284,14 @@ pp_check(m.pres,
 
 press %>%
   group_by(Plot, herb.press.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.pres, #ndraws = 500, 
+  add_epred_draws(m.pres, 
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (herb.press.m), 
              color = Treatment, 
              fill = Treatment)) +
-  #geom_line(aes(y = (.epred), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = press, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -341,7 +305,7 @@ press %>%
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Herbivory pressure on Plants log10()",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
@@ -371,7 +335,7 @@ m.cont = brm(bf(contr.m|mi(contr.sd) ~ 1
                 + Treatment 
                 + Plant.Richness.sc:Treatment
                 + (1 + Treatment|Block/Plot))
-             ,family = Beta(), #link = "log"
+             ,family = Beta(), 
              chains = 4,
              iter = 4000,
              cores = 4,
@@ -386,10 +350,6 @@ summary(m.cont, prob = 0.9)
 # slopes for each treatment
 cont.emt = emtrends(m.cont, "Treatment", var = "Plant.Richness.sc")
 summary(cont.emt, point.est = mean, level = .9)
-cont.em = emmeans (m.cont, pairwise  ~ Treatment | Plant.Richness.sc)
-cont.em = emmeans (m.cont, pairwise  ~ Treatment | Plant.Richness.sc,
-                   at = list(Plant.Richness.sc = c(-1.3786776, 1.1333247, 2.3308531)))
-summary(cont.em, point.est = mean, level = .9)
 # pairwise comparisons
 cont.pairs = pairs(cont.emt)
 summary(cont.pairs, point.est = mean, level = .9)
@@ -401,19 +361,14 @@ pp_check(m.cont,
 
 contr %>%
   group_by(Plot, contr.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.cont, #ndraws = 500, 
+  add_epred_draws(m.cont, 
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (contr.m), 
              color = Treatment, 
              fill = Treatment)) +
-  #geom_line(aes(y = (.epred), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = contr, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -427,7 +382,7 @@ contr %>%
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Control of herbivory (outfluxes/influxes)",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
@@ -463,7 +418,7 @@ m.detr = brm(bf(detr.flux.m|mi(detr.flux.sd) ~ 1
                 + Treatment 
                 + Plant.Richness.sc:Treatment
                 + (1 + Treatment|Block/Plot))
-             ,family = gaussian(), #link = "log"
+             ,family = gaussian(), 
              chains = 4,
              iter = 8000,
              cores = 4,
@@ -478,10 +433,6 @@ summary(m.detr, prob = 0.9)
 # slopes for each treatment
 detr.emt = emtrends(m.detr, "Treatment", var = "Plant.Richness.sc")
 summary(detr.emt, point.est = mean, level = .9)
-detr.em = emmeans (m.detr, pairwise  ~ Treatment | Plant.Richness.sc)
-detr.em = emmeans (m.detr, pairwise  ~ Treatment | Plant.Richness.sc,
-                   at = list(Plant.Richness.sc = c(-1.3786776, 1.1333247, 2.3308531)))
-summary(detr.em, point.est = mean, level = .9)
 # pairwise comparisons
 detr.pairs = pairs(detr.emt)
 summary(detr.pairs, point.est = mean, level = .9)
@@ -492,19 +443,14 @@ pp_check(m.detr, ndraws = 100)
 
 detr %>%
   group_by(Plot, detr.flux.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_edetr_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.detr, #ndraws = 500, 
+  add_epred_draws(m.detr,
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (detr.flux.m), 
              color = Treatment, 
              fill = Treatment)) +
-  #geom_line(aes(y = (.edetr), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = detr, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -518,7 +464,7 @@ detr %>%
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Detritivory log10(J/h\u00b7m\u00b2)",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
@@ -555,7 +501,7 @@ m.secon.decomp = brm(bf(secon.decomp.flux.m|mi(secon.decomp.flux.sd) ~ 1
                         + Treatment 
                         + Plant.Richness.sc:Treatment
                         + (1 + Treatment|Block/Plot))
-                     ,family = gaussian(), #link = "log"
+                     ,family = gaussian(), 
                      chains = 4,
                      iter = 8000,
                      cores = 4,
@@ -570,10 +516,6 @@ summary(m.secon.decomp, prob = 0.9)
 # slopes for each treatment
 secon.decomp.emt = emtrends(m.secon.decomp, "Treatment", var = "Plant.Richness.sc")
 summary(secon.decomp.emt, point.est = mean, level = .9)
-secon.decomp.em = emmeans (m.secon.decomp, pairwise  ~ Treatment | Plant.Richness.sc)
-secon.decomp.em = emmeans (m.secon.decomp, pairwise  ~ Treatment | Plant.Richness.sc,
-                           at = list(Plant.Richness.sc = c(-1.3786776, 1.1333247, 2.3308531)))
-summary(secon.decomp.em, point.est = mean, level = .9)
 # pairwise comparisons
 secon.decomp.pairs = pairs(secon.decomp.emt)
 summary(secon.decomp.pairs, point.est = mean, level = .9)
@@ -584,19 +526,14 @@ pp_check(m.secon.decomp, ndraws = 100)
 
 secon.decomp %>%
   group_by(Plot, secon.decomp.flux.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_esecon.decomp_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.secon.decomp, #ndraws = 500, 
+  add_epred_draws(m.secon.decomp, 
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (secon.decomp.flux.m), 
              color = Treatment, 
              fill = Treatment)) +
-  #geom_line(aes(y = (.esecon.decomp), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = secon.decomp, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -610,7 +547,7 @@ secon.decomp %>%
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Microbivory log10(J/h\u00b7m\u00b2)",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
@@ -633,20 +570,15 @@ library(patchwork)
 
 p1 = total %>% 
   group_by(Plot, tot.flux.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.tot, #ndraws = 500, 
+  add_epred_draws(m.tot,  
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (tot.flux.m), 
              color = Treatment, 
              fill = Treatment,
              linetype = Treatment)) +
-  #geom_line(aes(y = (.epred), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = total, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -662,7 +594,7 @@ p1 = total %>%
                                "soil (--), plant (--)")) +
   scale_linetype_manual(values = c("solid","solid","solid"),
                         guide = "none") +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Community level energy flux log10(J/h\u00b7m\u00b2)",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
@@ -679,20 +611,15 @@ p1 = total %>%
 
 p2 = pred %>%
   group_by(Plot, pred.flux.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.pred, #ndraws = 500, 
+  add_epred_draws(m.pred,  
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (pred.flux.m), 
              color = Treatment, 
              fill = Treatment,
              linetype = Treatment)) +
-  #geom_line(aes(y = (.epred), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = pred, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -707,7 +634,7 @@ p2 = pred %>%
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
   scale_linetype_manual(values = c("solid","solid","solid")) +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Predation log10(J/h\u00b7m\u00b2)",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
@@ -723,20 +650,15 @@ p2 = pred %>%
 
 p3 = herb %>%
   group_by(Plot, herb.flux.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_eherb_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.herb, #ndraws = 500, 
+  add_epred_draws(m.herb, 
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (herb.flux.m), 
              color = Treatment, 
              fill = Treatment,
              linetype = Treatment)) +
-  #geom_line(aes(y = (.eherb), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = herb, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -751,7 +673,7 @@ p3 = herb %>%
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
   scale_linetype_manual(values = c("solid","dashed","dashed")) +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Herbivory log10(J/h\u00b7m\u00b2)",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
@@ -767,19 +689,14 @@ p3 = herb %>%
 
 p4 = detr %>%
   group_by(Plot, detr.flux.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_edetr_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.detr, #ndraws = 500, 
+  add_epred_draws(m.detr, 
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (detr.flux.m), 
              color = Treatment, 
              fill = Treatment)) +
-  #geom_line(aes(y = (.edetr), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = detr, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -793,7 +710,7 @@ p4 = detr %>%
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Detritivory log10(J/h\u00b7m\u00b2)",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
@@ -809,19 +726,14 @@ p4 = detr %>%
 
 p5 = secon.decomp %>%
   group_by(Plot, secon.decomp.flux.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_esecon.decomp_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.secon.decomp, #ndraws = 500, 
+  add_epred_draws(m.secon.decomp, 
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (secon.decomp.flux.m), 
              color = Treatment, 
              fill = Treatment)) +
-  #geom_line(aes(y = (.esecon.decomp), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = secon.decomp, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -835,7 +747,7 @@ p5 = secon.decomp %>%
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Microbivory log10(J/h\u00b7m\u00b2)",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
@@ -857,19 +769,14 @@ p1 + ((p3+p2)/(p4+p5)) + plot_annotation(tag_levels = 'a')
 
 p6 = press %>%
   group_by(Plot, herb.press.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.pres, #ndraws = 500, 
+  add_epred_draws(m.pres, 
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (herb.press.m), 
              color = Treatment, 
              fill = Treatment)) +
-  #geom_line(aes(y = (.epred), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = press, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -883,7 +790,7 @@ p6 = press %>%
                     labels = c("soil (+), plant (+)", 
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Herbivory pressure on Plants",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
@@ -899,20 +806,15 @@ p6 = press %>%
 
 p7 = contr %>%
   group_by(Plot, contr.sd,
-           #latitude, longitude,
            Treatment) %>%
   data_grid(Plant.Richness.sc = seq_range(Plant.Richness.sc, n = 101)) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m.cont, #ndraws = 500, 
+  add_epred_draws(m.cont, 
                   re_formula = NA) %>%
   ggplot(aes(x = Plant.Richness.sc, 
              y = (contr.m), 
              color = Treatment, 
              fill = Treatment,
              linetype = Treatment)) +
-  #geom_line(aes(y = (.epred), group = paste(Treatment, .draw)), alpha = .25) +
   geom_point(data = contr, alpha = .75,
              position = position_jitter(width = .1)) +
   stat_lineribbon(aes(y = (.epred)), 
@@ -927,7 +829,7 @@ p7 = contr %>%
                                "soil (+), plant (--)", 
                                "soil (--), plant (--)")) +
   scale_linetype_manual(values = c("dashed","dashed","solid")) +
-  labs(#title = "Energy flux in the soil invertebrate food-web",
+  labs(
     y = "Control of herbivory",
     x = "Plant richness") +
   scale_color_manual(values = c("#F3BE61","#AA422E","#6C6F80"), 
