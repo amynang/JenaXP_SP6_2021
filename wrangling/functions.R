@@ -1,7 +1,7 @@
 
 
 
-############## to extract body measurement data from hell ######################
+############## to extract body measurement data ######################
 tidybodymeasurements <- function(df, taxon = "Taxon") {
   df = df %>% 
     # select lengths only

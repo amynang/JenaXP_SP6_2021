@@ -56,7 +56,7 @@ macro = bind_rows(raw.1, raw.2, raw.3, raw.4) %>%
          Treatment = paste0("Treatment", Treatment)) %>% 
   rowwise() %>% 
   mutate(.keep = "unused",
-         # this is terrible but we don't know what the larvae are
+         # this is not great but we don't know what the larvae are
          Coleoptera = sum(Staphylinidae, Coleptera, Coleoptera.Larven),
          # I am assuming that the adult flies found in the sample 
          # emerged from the soil between sampling and extraction
