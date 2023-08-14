@@ -66,7 +66,7 @@ macro = bind_rows(raw.1, raw.2, raw.3, raw.4) %>%
   select(-c(Plotcode, Pseudoscorpiones, Opiliones)) %>% 
   # (in.core divided by surface sampled to get density per cm^2, 
   #  then multiplying by 1e4 to get density per m^2)
-  mutate(across(where(is.numeric), ~ (./(pi*(7.5)^2))*1e4))
+  mutate(across(where(is.numeric), ~ (./(pi*(10)^2))*1e4))
 
 macro$Plot[macro$Plot == "BA305"] = "B3A05"
 
