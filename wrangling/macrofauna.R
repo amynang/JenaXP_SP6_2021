@@ -56,8 +56,8 @@ macro = bind_rows(raw.1, raw.2, raw.3, raw.4) %>%
          Treatment = paste0("Treatment", Treatment)) %>% 
   rowwise() %>% 
   mutate(.keep = "unused",
-         # this is not great but we don't know what the larvae are
-         Coleoptera = sum(Staphylinidae, Coleptera, Coleoptera.Larven),
+         # don't worry, the typo is in the raw data
+         Coleoptera = sum(Coleptera, Coleoptera.Larven),
          # I am assuming that the adult flies found in the sample 
          # emerged from the soil between sampling and extraction
          # (rather than coming through the window)
@@ -134,8 +134,6 @@ macro.masses = do.call(rbind.data.frame, l_w_list) %>% drop_na() %>%
   filter(weird != TRUE) %>% select(-weird) %>% 
   # calculate individual fresh bodymasses
   mutate(FreshMass.mg = case_when( # based on Sohlström 2018 10.1002/ece3.4702
-                                  # The general relationship (model 3)
-                                  TRUE ~ 10^(- .285 + (1.040 * log10(length_micro/1e3)) + (1.585 * log10(width_micro/1e3))),
                                   # group specific coefficients (model 1)
                                   taxon ==       "Araneae" ~ 10^(- .281 + (1.368 * log10(length_micro/1e3)) + (1.480 * log10(width_micro/1e3))),
                                   taxon ==    "Coleoptera" ~ 10^(- .286 + ( .840 * log10(length_micro/1e3)) + (1.954 * log10(width_micro/1e3))),
@@ -144,11 +142,13 @@ macro.masses = do.call(rbind.data.frame, l_w_list) %>% drop_na() %>%
                                   taxon ==     "Hemiptera" ~ 10^(- .420 + (1.177 * log10(length_micro/1e3)) + (1.431 * log10(width_micro/1e3))),
                                   taxon ==       "Isopoda" ~ 10^(- .453 + ( .898 * log10(length_micro/1e3)) + (1.756 * log10(width_micro/1e3))),
                                   taxon ==     "Chilopoda" ~ 10^(- .549 + (1.416 * log10(length_micro/1e3)) + (1.543 * log10(width_micro/1e3))),
-                                  taxon ==     "Diplopoda" ~ 10^(-1.400 + (2.443 * log10(length_micro/1e3)) + (0.215 * log10(width_micro/1e3))))
+                                  taxon ==     "Diplopoda" ~ 10^(-1.400 + (2.443 * log10(length_micro/1e3)) + (0.215 * log10(width_micro/1e3))),
+                                  # The general relationship (model 3)
+                                  TRUE ~ 10^(- .285 + (1.040 * log10(length_micro/1e3)) + (1.585 * log10(width_micro/1e3))))
   )
 
 mean.macro.masses = macro.masses %>% 
-                    mutate(taxon = ifelse(taxon == "Staphylinidae", "Coleoptera", taxon)) %>% 
+                    #mutate(taxon = ifelse(taxon == "Staphylinidae", "Coleoptera", taxon)) %>% 
                     group_by(taxon) %>% 
                     summarise(N = n(),
                               MeanMass.mg = mean(FreshMass.mg),

@@ -225,16 +225,8 @@ ecophys = data.frame(Taxon = nemaplex$Taxon,
 
 # we will rely on Mulder & Vonk (2011) for bodymass information
 # if a taxon is not there we resort to nemaplex
-ecophys$AvgMass = ifelse(ecophys$Taxon %in% muldervonk$TAX.MORPHON, 
-                         muldervonk$AvgMass[match(ecophys$Taxon, muldervonk$TAX.MORPHON)], 
-                         nemaplex$AvgMass[match(ecophys$Taxon, nemaplex$Taxon)])
-ecophys$StDevMass = ifelse(ecophys$Taxon %in% muldervonk$TAX.MORPHON, 
-                           muldervonk$StDevMass[match(ecophys$Taxon, muldervonk$TAX.MORPHON)], 
-                           nemaplex$StDevMass[match(ecophys$Taxon, nemaplex$Taxon)])
-
-# only one individual
-ecophys[24, "StDevMass"] = ecophys[24, "AvgMass"]
-ecophys[51, "StDevMass"] = ecophys[51, "AvgMass"]
+ecophys$AvgMass = nemaplex$AvgMass[match(ecophys$Taxon, nemaplex$Taxon)]
+ecophys$StDevMass = nemaplex$StDevMass[match(ecophys$Taxon, nemaplex$Taxon)]
 
 
 ecophys = ecophys %>% add_column(feeding.type = nemaplex$feeding.type,
